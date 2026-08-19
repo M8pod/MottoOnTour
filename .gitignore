@@ -1,0 +1,3 @@
+# Documenti di specifica e concept locali (non necessari per la distribuzione)
+*.txt
+.DS_Store

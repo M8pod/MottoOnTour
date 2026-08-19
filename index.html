@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="robots" content="noindex, nofollow">
+  <title>MOTTO ON TOUR</title>
+
+  <!-- PWA & Apple Meta Tags -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MottoOnTour">
+
+  <!-- Icons -->
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+  <link rel="shortcut icon" href="favicon.ico">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/leaflet.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- REGIONE LIVE ARIA PER LETTORI DI SCHERMO (VOICEOVER) -->
+  <div id="aria-live-announcer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- SCHERMATA BLOCCO PIN DI SICUREZZA -->
+  <div id="pin-screen" class="pin-screen" role="dialog" aria-modal="true" aria-labelledby="pin-heading">
+    <div class="pin-container">
+      <img src="app-logo.png" alt="Logo Motto On Tour" class="pin-logo">
+      <h1 id="pin-heading" style="color: var(--pink); font-size: 1.4rem; margin-bottom: 6px;">MOTTO ON TOUR</h1>
+      <p style="color: var(--mint); font-size: 0.95rem; font-weight: 700;">ACCESSO RISERVATO</p>
+
+      <form onsubmit="App.handlePinSubmit(event)">
+        <label for="input-pin" class="sr-only">Inserisci il codice PIN a 6 cifre</label>
+        <input type="password" id="input-pin" class="form-control pin-input raw-case" maxlength="6" inputmode="numeric" pattern="[0-9]*" placeholder="••••••" required autocomplete="off">
+        
+        <p id="pin-error" style="color: var(--danger); font-weight: 700; font-size: 0.9rem; display: none; margin-bottom: 12px;" role="alert">
+          PIN errato. Riprova.
+        </p>
+
+        <button type="submit" class="btn btn-primary btn-block" style="min-height: 48px; font-size: 1.05rem;">
+          🔓 SBLOCCA APPLICAZIONE
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- STRUTTURA APPLICAZIONE (APP SHELL) -->
+  <div id="app-shell" style="display: none;">
+    <!-- INTESTAZIONE SUPERIORE FISSA -->
+    <header class="app-header" role="banner">
+      <div class="header-inner">
+        <a href="#" class="header-brand" onclick="App.navigate('home'); return false;" aria-label="Motto On Tour Home">
+          <img src="app-logo.png" alt="Icona Motto On Tour" class="header-logo">
+          <span class="header-title">MOTTO ON TOUR</span>
+        </a>
+      </div>
+    </header>
+
+    <!-- CONTENITORE PRINCIPALE DEI MODULI -->
+    <main id="app-container" class="main-content" role="main">
+      <!-- Il modulo attivo viene renderizzato qui dinamicamente -->
+    </main>
+
+    <!-- PIÈ DI PAGINA NAVIGAZIONE FISSA (ORDINE ESATTO: 1-8) -->
+    <nav class="app-footer" role="navigation" aria-label="Menu principale di navigazione">
+      <div class="footer-nav">
+        <!-- 1. Home -->
+        <button class="nav-item" data-module="home" onclick="App.navigate('home')" aria-label="1 di 8: Home">
+          <span class="nav-icon" aria-hidden="true">🏠</span>
+          <span>Home</span>
+        </button>
+
+        <!-- 2. Diario di bordo -->
+        <button class="nav-item" data-module="diario" onclick="App.navigate('diario')" aria-label="2 di 8: Diario di bordo">
+          <span class="nav-icon" aria-hidden="true">📖</span>
+          <span>Diario</span>
+        </button>
+
+        <!-- 3. Il mio passaporto -->
+        <button class="nav-item" data-module="passaporto" onclick="App.navigate('passaporto')" aria-label="3 di 8: Il mio passaporto">
+          <span class="nav-icon" aria-hidden="true">🛂</span>
+          <span>Passaporto</span>
+        </button>
+
+        <!-- 4. Sfide -->
+        <button class="nav-item" data-module="sfide" onclick="App.navigate('sfide')" aria-label="4 di 8: Sfide">
+          <span class="nav-icon" aria-hidden="true">🏆</span>
+          <span>Sfide</span>
+        </button>
+
+        <!-- 5. Le mie mappe -->
+        <button class="nav-item" data-module="mappe" onclick="App.navigate('mappe')" aria-label="5 di 8: Le mie mappe">
+          <span class="nav-icon" aria-hidden="true">🗺️</span>
+          <span>Mappe</span>
+        </button>
+
+        <!-- 6. In partenza -->
+        <button class="nav-item" data-module="in-partenza" onclick="App.navigate('in-partenza')" aria-label="6 di 8: In partenza">
+          <span class="nav-icon" aria-hidden="true">✈️</span>
+          <span>In Partenza</span>
+        </button>
+
+        <!-- 7. Viaggi nel cassetto -->
+        <button class="nav-item" data-module="cassetto" onclick="App.navigate('cassetto')" aria-label="7 di 8: Viaggi nel cassetto">
+          <span class="nav-icon" aria-hidden="true">✨</span>
+          <span>Cassetto</span>
+        </button>
+
+        <!-- 8. Impostazioni -->
+        <button class="nav-item" data-module="impostazioni" onclick="App.navigate('impostazioni')" aria-label="8 di 8: Impostazioni">
+          <span class="nav-icon" aria-hidden="true">⚙️</span>
+          <span>Impostazioni</span>
+        </button>
+      </div>
+    </nav>
+  </div>
+
+  <!-- FINESTRA MODALE ACCESSIBILE CONDIVISA -->
+  <div id="app-modal" class="modal-backdrop" style="display: none;" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="modal-title">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h2 id="modal-title" tabindex="-1" style="margin: 0; font-size: 1.15rem; color: var(--pink); border: none;">TITOLO MODALE</h2>
+        <button class="btn btn-sm btn-pink" onclick="App.closeModal()" aria-label="Chiudi finestra modale">✕</button>
+      </div>
+      <div class="modal-body" id="modal-body-content"></div>
+      <div class="modal-footer">
+        <button class="btn btn-sm btn-pink" onclick="App.closeModal()">ANNULLA</button>
+        <button class="btn btn-sm btn-primary" id="modal-confirm-btn" onclick="App.confirmModalAction()">CONFERMA</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT DELL'APPLICAZIONE -->
+  <script src="js/leaflet.js"></script>
+  <script src="js/world-geo.js"></script>
+  <script src="js/leaflet-image.js"></script>
+  <script src="js/jspdf.umd.min.js"></script>
+  <script src="js/jspdf.plugin.autotable.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/geo.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/pdf.js"></script>
+  
+  <!-- MODULI INDIPENDENTI -->
+  <script src="js/modules/home/home.js"></script>
+  <script src="js/modules/in-partenza/in-partenza.js"></script>
+  <script src="js/modules/diario/diario.js"></script>
+  <script src="js/modules/passaporto/passaporto.js"></script>
+  <script src="js/modules/sfide/sfide.js"></script>
+  <script src="js/modules/cassetto/cassetto.js"></script>
+  <script src="js/modules/mappe/mappe.js"></script>
+  <script src="js/modules/impostazioni/impostazioni.js"></script>
+  
+  <!-- APP CONTROLLER -->
+  <script src="js/app.js"></script>
+</body>
+</html>
