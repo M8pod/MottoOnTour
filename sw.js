@@ -1,4 +1,4 @@
-const CACHE_NAME = 'motto-on-tour-v3';
+const CACHE_NAME = 'motto-on-tour-v4';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -15,6 +15,8 @@ const ASSETS_TO_CACHE = [
   './js/leaflet.js',
   './js/world-geo.js',
   './js/leaflet-image.js',
+  './js/jspdf.umd.min.js',
+  './js/jspdf.plugin.autotable.min.js',
   './js/config.js',
   './js/audio.js',
   './js/geo.js',
