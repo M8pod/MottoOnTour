@@ -3,7 +3,7 @@
 // ==========================================================================
 
 const PassaportoModule = {
-  currentCategory: 'main', // 'main', 'geografia', 'storico', 'compagni', 'economia'
+  currentCategory: 'main', // 'main', 'geografia', 'storico', 'compagni', 'economia', 'citta_dettaglio'
   selectedCompanion: null,
   selectedCity: null,
   selectedCarrier: null,
@@ -11,6 +11,8 @@ const PassaportoModule = {
   render(container) {
     if (this.currentCategory === 'geografia') {
       this.renderGeografia(container);
+    } else if (this.currentCategory === 'citta_dettaglio') {
+      this.renderCityDrillDown(container);
     } else if (this.currentCategory === 'storico') {
       this.renderStorico(container);
     } else if (this.currentCategory === 'compagni') {
@@ -223,6 +225,71 @@ const PassaportoModule = {
     App.render();
   },
 
+  openCityDrillDown(cityName) {
+    this.selectedCity = cityName;
+    this.currentCategory = 'citta_dettaglio';
+    App.render();
+  },
+
+  renderCityDrillDown(container) {
+    const stats = this.getAggregatedData();
+    const cityName = this.selectedCity;
+    const trips = stats.visitedCitiesMap.get(cityName) || [];
+
+    // Sort trips chronologically from most recent to oldest
+    const getEndDate = (t) => {
+      if (t.Data_Fine_Globale) return new Date(t.Data_Fine_Globale).getTime();
+      if (t.Data_Inizio_Globale) return new Date(t.Data_Inizio_Globale).getTime();
+      if (t.Anno_Viaggio) {
+        const y = parseInt(String(t.Anno_Viaggio).match(/\d{4}/)?.[0] || '0');
+        if (y > 0) return new Date(y, 11, 31).getTime();
+      }
+      return 0;
+    };
+    const sortedTrips = [...trips].sort((a, b) => getEndDate(b) - getEndDate(a));
+
+    container.innerHTML = `
+      <div class="action-bar">
+        <button class="btn btn-sm btn-pink" onclick="PassaportoModule.openCategory('geografia');" aria-label="Torna a Geografia e Mondo">
+          ⬅️ TORNA A GEOGRAFIA
+        </button>
+      </div>
+
+      <h1 id="screen-title" tabindex="-1">VIAGGI A ${cityName.toUpperCase()}</h1>
+      <p style="color: var(--pink-light); margin-bottom: 16px;">
+        Elenco cronologico dei viaggi contenenti questa città (${sortedTrips.length} ${sortedTrips.length === 1 ? 'viaggio' : 'viaggi'}).
+      </p>
+
+      ${sortedTrips.length > 0 ? `
+        <div class="trips-list">
+          ${sortedTrips.map(t => {
+            const dStart = CONFIG.formatDateDisplay(t.Data_Inizio_Globale);
+            const dEnd = CONFIG.formatDateDisplay(t.Data_Fine_Globale);
+            const dateDisplay = dStart && dEnd ? `DAL ${dStart} AL ${dEnd}` : (dStart ? `DATA ${dStart}` : (t.Anno_Viaggio ? `ANNO ${t.Anno_Viaggio}` : ''));
+            const dateAria = dStart && dEnd ? `dal ${dStart} al ${dEnd}` : (dStart ? `data ${dStart}` : (t.Anno_Viaggio ? `anno ${t.Anno_Viaggio}` : ''));
+            return `
+              <button type="button" class="card card-mint card-interactive card-btn" onclick="DiarioModule.openTripDetails('${t.ID_Viaggio}', 'passaporto')" aria-label="Scheda viaggio: ${t.Nome_Viaggio}. ${dateAria}. Tipologia: ${t.Tipologia_Viaggio || 'Standard'}. Stati: ${(t.Stati || '-').replace(/\n/g, ', ')}. Apri dettagli viaggio nel Diario di bordo.">
+                <h2 style="color: var(--mint); margin-top: 0; border: none;">${t.Nome_Viaggio}</h2>
+                <p style="color: var(--pink-light); font-weight: 700; margin: 4px 0;">
+                  ${dateDisplay}
+                </p>
+                <p style="color: #ccc; margin-top: 4px; font-size: 0.9rem;">
+                  Tipologia: <strong>${t.Tipologia_Viaggio || 'Standard'}</strong> | Stati: <strong>${(t.Stati || '-').replace(/\n/g, ', ')}</strong>
+                  ${t.Compagni_Viaggio ? ` | 👥 <strong>${(t.Compagni_Viaggio || '').replace(/\n/g, ', ')}</strong>` : ''}
+                </p>
+                <span class="btn btn-sm btn-primary" style="margin-top: 10px; pointer-events: none;">VEDI SCHEDA VIAGGIO NEL DIARIO ➔</span>
+              </button>
+            `;
+          }).join('')}
+        </div>
+      ` : `
+        <div class="empty-state">
+          <p class="empty-state-text">Nessun viaggio registrato per ${cityName}.</p>
+        </div>
+      `}
+    `;
+  },
+
   renderGeografia(container) {
     const stats = this.getAggregatedData();
     const geo = stats.geoStats;
@@ -262,11 +329,16 @@ const PassaportoModule = {
         ${Object.keys(continentGroups).length > 0 ? `
           <div class="table-responsive">
             <table class="table-closed">
-              <thead><tr><th>CONTINENTE</th><th>STATI ESPLORATI</th></tr></thead>
+              <thead>
+                <tr>
+                  <th scope="col">CONTINENTE</th>
+                  <th scope="col">STATI ESPLORATI</th>
+                </tr>
+              </thead>
               <tbody>
                 ${Object.entries(continentGroups).map(([cont, list]) => `
                   <tr>
-                    <th>${cont.toUpperCase()} (${list.length})</th>
+                    <th scope="row">${cont.toUpperCase()} (${list.length})</th>
                     <td>${list.map(s => `${s.flag} ${s.state}`).join(', ')}</td>
                   </tr>
                 `).join('')}
@@ -281,15 +353,21 @@ const PassaportoModule = {
         <h2>RECORD GEOGRAFICI (RIFERIMENTO VENEZIA)</h2>
         <div class="table-responsive">
           <table class="table-closed">
+            <thead>
+              <tr>
+                <th scope="col" style="width: 40%;">PARAMETRO</th>
+                <th scope="col">LOCALITÀ / VALORE</th>
+              </tr>
+            </thead>
             <tbody>
-              <tr><th style="width: 40%;">CITTÀ PIÙ A NORD</th><td>${geo.mostNorth ? `📍 ${geo.mostNorth.Citta} (${geo.mostNorth.Stato}) [${geo.mostNorth.Latitudine}°]` : 'IN ATTESA DEL PRIMO VIAGGIO'}</td></tr>
-              <tr><th>CITTÀ PIÙ A SUD</th><td>${geo.mostSouth ? `📍 ${geo.mostSouth.Citta} (${geo.mostSouth.Stato}) [${geo.mostSouth.Latitudine}°]` : 'IN ATTESA DEL PRIMO VIAGGIO'}</td></tr>
-              <tr><th>CITTÀ PIÙ A EST</th><td>${geo.mostEast ? `📍 ${geo.mostEast.Citta} (${geo.mostEast.Stato}) [${geo.mostEast.Longitudine}°]` : 'IN ATTESA DEL PRIMO VIAGGIO'}</td></tr>
-              <tr><th>CITTÀ PIÙ A OVEST</th><td>${geo.mostWest ? `📍 ${geo.mostWest.Citta} (${geo.mostWest.Stato}) [${geo.mostWest.Longitudine}°]` : 'IN ATTESA DEL PRIMO VIAGGIO'}</td></tr>
-              <tr><th>PIÙ LONTANA DA VENEZIA</th><td>${geo.farthestFromVenice ? `✈️ ${geo.farthestFromVenice.Citta} (${geo.farthestFromVenice.distFromVenice} km in linea d'aria)` : 'IN ATTESA DEL PRIMO VIAGGIO'}</td></tr>
-              <tr><th>PIÙ VICINA A VENEZIA</th><td>${geo.closestToVenice ? `🚤 ${geo.closestToVenice.Citta} (${geo.closestToVenice.distFromVenice} km in linea d'aria)` : 'IN ATTESA DEL PRIMO VIAGGIO'}</td></tr>
-              <tr><th>PIÙ VICINE ALL'EQUATORE</th><td>${geo.closestToEquator.length > 0 ? geo.closestToEquator.map(c => `🌍 ${c.Citta} (${c.Stato})`).join('<br>') : 'IN ATTESA DEL PRIMO VIAGGIO'}</td></tr>
-              <tr><th>PIÙ VICINE AI POLI</th><td>${geo.closestToPoles.length > 0 ? geo.closestToPoles.map(c => `❄️ ${c.Citta} (${c.pole})`).join('<br>') : 'IN ATTESA DEL PRIMO VIAGGIO'}</td></tr>
+              <tr><th scope="row">CITTÀ PIÙ A NORD</th><td>${geo.mostNorth ? `📍 ${geo.mostNorth.Citta} (${geo.mostNorth.Stato}) [${geo.mostNorth.Latitudine}°]` : 'IN ATTESA DEL PRIMO VIAGGIO'}</td></tr>
+              <tr><th scope="row">CITTÀ PIÙ A SUD</th><td>${geo.mostSouth ? `📍 ${geo.mostSouth.Citta} (${geo.mostSouth.Stato}) [${geo.mostSouth.Latitudine}°]` : 'IN ATTESA DEL PRIMO VIAGGIO'}</td></tr>
+              <tr><th scope="row">CITTÀ PIÙ A EST</th><td>${geo.mostEast ? `📍 ${geo.mostEast.Citta} (${geo.mostEast.Stato}) [${geo.mostEast.Longitudine}°]` : 'IN ATTESA DEL PRIMO VIAGGIO'}</td></tr>
+              <tr><th scope="row">CITTÀ PIÙ A OVEST</th><td>${geo.mostWest ? `📍 ${geo.mostWest.Citta} (${geo.mostWest.Stato}) [${geo.mostWest.Longitudine}°]` : 'IN ATTESA DEL PRIMO VIAGGIO'}</td></tr>
+              <tr><th scope="row">PIÙ LONTANA DA VENEZIA</th><td>${geo.farthestFromVenice ? `✈️ ${geo.farthestFromVenice.Citta} (${geo.farthestFromVenice.distFromVenice} km in linea d'aria)` : 'IN ATTESA DEL PRIMO VIAGGIO'}</td></tr>
+              <tr><th scope="row">PIÙ VICINA A VENEZIA</th><td>${geo.closestToVenice ? `🚤 ${geo.closestToVenice.Citta} (${geo.closestToVenice.distFromVenice} km in linea d'aria)` : 'IN ATTESA DEL PRIMO VIAGGIO'}</td></tr>
+              <tr><th scope="row">PIÙ VICINE ALL'EQUATORE</th><td>${geo.closestToEquator.length > 0 ? geo.closestToEquator.map(c => `🌍 ${c.Citta} (${c.Stato})`).join('<br>') : 'IN ATTESA DEL PRIMO VIAGGIO'}</td></tr>
+              <tr><th scope="row">PIÙ VICINE AI POLI</th><td>${geo.closestToPoles.length > 0 ? geo.closestToPoles.map(c => `❄️ ${c.Citta} (${c.pole})`).join('<br>') : 'IN ATTESA DEL PRIMO VIAGGIO'}</td></tr>
             </tbody>
           </table>
         </div>
@@ -298,33 +376,18 @@ const PassaportoModule = {
       <!-- 4. LISTA CITTÀ VISITATE -->
       <section class="card">
         <h2>TUTTE LE CITTÀ VISITATE NEL MONDO (${stats.totalCitiesCount})</h2>
-        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;">
+        <p style="color: #ccc; font-size: 0.9rem; margin-top: 4px; margin-bottom: 12px;">
+          Tocca una città per visualizzare tutti i relativi viaggi in ordine cronologico.
+        </p>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
           ${Array.from(stats.visitedCitiesMap.keys()).sort().map(c => `
-            <button class="btn btn-sm ${this.selectedCity === c ? 'btn-primary' : 'btn-pink'}" onclick="PassaportoModule.selectCity('${c}')">
+            <button type="button" class="btn btn-sm btn-pink" onclick="PassaportoModule.openCityDrillDown('${c.replace(/'/g, "\\'")}')" aria-label="Città di ${c}. Apri elenco viaggi.">
               📍 ${c}
             </button>
           `).join('')}
         </div>
-
-        ${this.selectedCity ? `
-          <div style="margin-top: 16px; border: 2px solid var(--mint); border-radius: 8px; padding: 12px; background-color: var(--bg-black);">
-            <h3 style="color: var(--mint); margin-top: 0;">VIAGGI A: ${this.selectedCity}</h3>
-            ${(stats.visitedCitiesMap.get(this.selectedCity) || []).map(t => `
-              <div style="margin: 6px 0;">
-                <button class="btn btn-sm btn-primary" onclick="DiarioModule.openTripDetails('${t.ID_Viaggio}')">
-                  📖 ${t.Nome_Viaggio} (${t.Anno_Viaggio || t.Data_Inizio_Globale || '-'})
-                </button>
-              </div>
-            `).join('')}
-          </div>
-        ` : ''}
       </section>
     `;
-  },
-
-  selectCity(city) {
-    this.selectedCity = this.selectedCity === city ? null : city;
-    App.render();
   },
 
   renderStorico(container) {
@@ -347,10 +410,15 @@ const PassaportoModule = {
         <h2>FREQUENZA DEI VIAGGI PER ANNO</h2>
         <div class="table-responsive">
           <table class="table-closed">
-            <thead><tr><th>ANNO</th><th>NUMERO DI VIAGGI</th></tr></thead>
+            <thead>
+              <tr>
+                <th scope="col">ANNO</th>
+                <th scope="col">NUMERO DI VIAGGI</th>
+              </tr>
+            </thead>
             <tbody>
               ${Object.entries(stats.tripsByYear).sort((a, b) => b[0] - a[0]).map(([yr, cnt]) => `
-                <tr><th>${yr}</th><td>${cnt} viaggi</td></tr>
+                <tr><th scope="row">${yr}</th><td>${cnt} viaggi</td></tr>
               `).join('')}
             </tbody>
           </table>
@@ -362,11 +430,17 @@ const PassaportoModule = {
         <h2>MEZZI DI TRASPORTO UTILIZZATI</h2>
         <div class="table-responsive">
           <table class="table-closed">
-            <thead><tr><th>MEZZO</th><th>UTILIZZI</th><th>PERCENTUALE</th></tr></thead>
+            <thead>
+              <tr>
+                <th scope="col">MEZZO</th>
+                <th scope="col">UTILIZZI</th>
+                <th scope="col">PERCENTUALE</th>
+              </tr>
+            </thead>
             <tbody>
               ${Object.entries(stats.transportCounts).map(([m, cnt]) => {
                 const pct = stats.totalTrips > 0 ? ((cnt / stats.totalTrips) * 100).toFixed(0) : '0';
-                return `<tr><th>${m}</th><td>${cnt}</td><td>${pct}%</td></tr>`;
+                return `<tr><th scope="row">${m}</th><td>${cnt}</td><td>${pct}%</td></tr>`;
               }).join('')}
             </tbody>
           </table>
@@ -397,6 +471,18 @@ const PassaportoModule = {
       filteredTrips = trips.filter(t => String(t.Compagni_Viaggio || '').split('\n').map(p => p.trim().toLowerCase()).includes(this.selectedCompanion.toLowerCase()));
     }
 
+    // Sort companion trips chronologically
+    const getEndDate = (t) => {
+      if (t.Data_Fine_Globale) return new Date(t.Data_Fine_Globale).getTime();
+      if (t.Data_Inizio_Globale) return new Date(t.Data_Inizio_Globale).getTime();
+      if (t.Anno_Viaggio) {
+        const y = parseInt(String(t.Anno_Viaggio).match(/\d{4}/)?.[0] || '0');
+        if (y > 0) return new Date(y, 11, 31).getTime();
+      }
+      return 0;
+    };
+    filteredTrips.sort((a, b) => getEndDate(b) - getEndDate(a));
+
     container.innerHTML = `
       <div class="action-bar" style="justify-content: space-between;">
         <button class="btn btn-sm btn-pink" onclick="PassaportoModule.openCategory('main')">
@@ -414,10 +500,16 @@ const PassaportoModule = {
         <h2>RIPARTIZIONE STATISTICA</h2>
         <div class="table-responsive">
           <table class="table-closed">
-            <thead><tr><th>TIPOLOGIA</th><th>NUMERO VIAGGI</th><th>PERCENTUALE</th></tr></thead>
+            <thead>
+              <tr>
+                <th scope="col">TIPOLOGIA</th>
+                <th scope="col">NUMERO VIAGGI</th>
+                <th scope="col">PERCENTUALE</th>
+              </tr>
+            </thead>
             <tbody>
-              <tr><th>ESCLUSIVI ROBY & ELE 💙</th><td>${stats.robyEleCount}</td><td>${stats.robyElePercent}%</td></tr>
-              <tr><th>VIAGGI CON LA CIURMA! 👥</th><td>${stats.ciurmaCount}</td><td>${stats.ciurmaPercent}%</td></tr>
+              <tr><th scope="row">ESCLUSIVI ROBY & ELE 💙</th><td>${stats.robyEleCount}</td><td>${stats.robyElePercent}%</td></tr>
+              <tr><th scope="row">VIAGGI CON LA CIURMA! 👥</th><td>${stats.ciurmaCount}</td><td>${stats.ciurmaPercent}%</td></tr>
             </tbody>
           </table>
         </div>
@@ -443,13 +535,22 @@ const PassaportoModule = {
         ${this.selectedCompanion ? `
           <div style="margin-top: 16px;">
             <h3>VIAGGI EFFETTUATI (${filteredTrips.length})</h3>
-            ${filteredTrips.map(t => `
-              <div style="margin: 8px 0;">
-                <button class="btn btn-sm btn-primary" onclick="DiarioModule.openTripDetails('${t.ID_Viaggio}')">
-                  📖 ${t.Nome_Viaggio} (${t.Anno_Viaggio || t.Data_Inizio_Globale || '-'})
-                </button>
-              </div>
-            `).join('')}
+            <div class="trips-list">
+              ${filteredTrips.map(t => {
+                const dStart = CONFIG.formatDateDisplay(t.Data_Inizio_Globale);
+                const dEnd = CONFIG.formatDateDisplay(t.Data_Fine_Globale);
+                const dateText = dStart && dEnd ? `Dal ${dStart} al ${dEnd}` : (dStart ? `Data ${dStart}` : (t.Anno_Viaggio ? `Anno ${t.Anno_Viaggio}` : ''));
+                return `
+                  <button type="button" class="card card-mint card-interactive card-btn" onclick="DiarioModule.openTripDetails('${t.ID_Viaggio}', 'passaporto')" aria-label="Scheda viaggio: ${t.Nome_Viaggio}. ${dateText}. Apri dettagli viaggio.">
+                    <h3 style="color: var(--mint); margin: 0;">${t.Nome_Viaggio}</h3>
+                    <p style="color: #ccc; font-size: 0.9rem; margin-top: 4px;">
+                      📅 ${dStart && dEnd ? `${dStart} -> ${dEnd}` : (t.Anno_Viaggio || dStart || '-')}
+                      ${t.Stati ? ` | 📍 ${t.Stati.replace(/\n/g, ', ')}` : ''}
+                    </p>
+                  </button>
+                `;
+              }).join('')}
+            </div>
           </div>
         ` : ''}
       </section>
@@ -497,12 +598,18 @@ const PassaportoModule = {
         <h2>RIPARTIZIONE BUDGET PER CATEGORIA</h2>
         <div class="table-responsive">
           <table class="table-closed">
-            <thead><tr><th>CATEGORIA</th><th>TOTALE SPESO</th><th>PERCENTUALE</th></tr></thead>
+            <thead>
+              <tr>
+                <th scope="col">CATEGORIA</th>
+                <th scope="col">TOTALE SPESO</th>
+                <th scope="col">PERCENTUALE</th>
+              </tr>
+            </thead>
             <tbody>
               ${CONFIG.EXPENSE_CATEGORIES.map(cat => {
                 const amt = stats.budgetByCategory[cat.key] || 0;
                 const pct = stats.totalSpend > 0 ? ((amt / stats.totalSpend) * 100).toFixed(1) : '0';
-                return `<tr><th>${cat.label}</th><td>€ ${amt.toLocaleString('it-IT')}</td><td>${pct}%</td></tr>`;
+                return `<tr><th scope="row">${cat.label}</th><td>€ ${amt.toLocaleString('it-IT')}</td><td>${pct}%</td></tr>`;
               }).join('')}
             </tbody>
           </table>

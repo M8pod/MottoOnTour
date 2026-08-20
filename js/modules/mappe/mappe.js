@@ -6,7 +6,21 @@ const MappeModule = {
   render(container) {
     const coords = API.data[CONFIG.SHEETS.COORDINATE] || [];
     const diarioTrips = API.data[CONFIG.SHEETS.DIARIO] || [];
-    const lastTrip = diarioTrips.length > 0 ? diarioTrips[diarioTrips.length - 1] : null;
+    
+    // Sort completed trips chronologically by end date (latest first)
+    const sortedDiario = [...diarioTrips].sort((a, b) => {
+      const getEndDate = (t) => {
+        if (t.Data_Fine_Globale) return new Date(t.Data_Fine_Globale).getTime();
+        if (t.Data_Inizio_Globale) return new Date(t.Data_Inizio_Globale).getTime();
+        if (t.Anno_Viaggio) {
+          const y = parseInt(String(t.Anno_Viaggio).match(/\d{4}/)?.[0] || '0');
+          if (y > 0) return new Date(y, 11, 31).getTime();
+        }
+        return 0;
+      };
+      return getEndDate(b) - getEndDate(a);
+    });
+    const lastTrip = sortedDiario.length > 0 ? sortedDiario[0] : null;
 
     // Filter cities by location
     const italyCities = coords.filter(c => String(c.Stato || '').toUpperCase() === 'ITALIA');
@@ -56,7 +70,7 @@ const MappeModule = {
           <p class="stat-value" style="font-size: 1.1rem; margin: 4px 0 12px 0;">
             ${visitedStates.size} PAESI VISITATI SUL TOTALE MONDIALE (195 STATI)
           </p>
-          <div id="map-world" class="map-container" style="height: 380px;" aria-label="Mappa mondiale interattiva paesi visitati"></div>
+          <div id="map-world" class="map-container" style="height: 380px;" aria-hidden="true"></div>
           <button class="btn btn-sm btn-primary" onclick="MappeModule.shareCanvas('map-world', 'Mappa_Mondo_MottoOnTour.jpg')">
             📤 CONDIVIDI MAPPA MONDO
           </button>
@@ -70,7 +84,7 @@ const MappeModule = {
             <p class="stat-value" style="font-size: 1.1rem; margin: 4px 0 12px 0;">
               ${italyCities.length} CITTÀ VISITATE IN ITALIA
             </p>
-            <div id="map-italy" class="map-container" style="height: 380px;" aria-label="Mappa interattiva città visitate in Italia"></div>
+            <div id="map-italy" class="map-container" style="height: 380px;" aria-hidden="true"></div>
             <button class="btn btn-sm btn-primary" onclick="MappeModule.shareCanvas('map-italy', 'Mappa_Italia_MottoOnTour.jpg')">
               📤 CONDIVIDI MAPPA ITALIA
             </button>
@@ -85,7 +99,7 @@ const MappeModule = {
             <p class="stat-value" style="font-size: 1.1rem; margin: 4px 0 12px 0;">
               ${list.length} CITTÀ VISITATE
             </p>
-            <div id="map-cont-${cont.replace(/\s+/g, '-').toLowerCase()}" class="map-container" style="height: 360px;" aria-label="Mappa interattiva ${cont}"></div>
+            <div id="map-cont-${cont.replace(/\s+/g, '-').toLowerCase()}" class="map-container" style="height: 360px;" aria-hidden="true"></div>
             <button class="btn btn-sm btn-primary" onclick="MappeModule.shareCanvas('map-cont-${cont.replace(/\s+/g, '-').toLowerCase()}', 'Mappa_${cont}_MottoOnTour.jpg')">
               📤 CONDIVIDI MAPPA ${cont.toUpperCase()}
             </button>
@@ -100,7 +114,7 @@ const MappeModule = {
             <p class="stat-value" style="font-size: 1.1rem; margin: 4px 0 12px 0;">
               TAPPE: ${(lastTrip.Citta || '').replace(/\n/g, ' ➔ ')}
             </p>
-            <div id="map-last-trip" class="map-container" style="height: 360px;" aria-label="Mappa interattiva ultimo viaggio"></div>
+            <div id="map-last-trip" class="map-container" style="height: 360px;" aria-hidden="true"></div>
             <button class="btn btn-sm btn-primary" onclick="MappeModule.shareCanvas('map-last-trip', 'Mappa_UltimoViaggio_MottoOnTour.jpg')">
               📤 CONDIVIDI ULTIMO VIAGGIO
             </button>

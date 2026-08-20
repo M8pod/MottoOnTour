@@ -57,11 +57,14 @@ const InPartenzaModule = {
       </p>
 
       ${trips.length > 0 ? `
-        <div class="trips-list" role="list">
+        <div class="trips-list">
           ${trips.map(trip => {
             const budget = this.calculateTripBudget(trip);
+            const dStart = CONFIG.formatDateDisplay(trip.Data_Inizio_Globale);
+            const dEnd = CONFIG.formatDateDisplay(trip.Data_Fine_Globale);
+            const dateText = dStart && dEnd ? `Dal ${dStart} al ${dEnd}` : (dStart ? `Partenza ${dStart}` : 'Date in fase di definizione');
             return `
-              <div class="card card-mint card-interactive" role="listitem" tabindex="0" onclick="InPartenzaModule.openTripDetails('${trip.ID_InPartenza}')" onkeydown="if(event.key==='Enter') InPartenzaModule.openTripDetails('${trip.ID_InPartenza}')" aria-label="Scheda ${trip.Nome_Viaggio}, budget previsto ${budget} Euro">
+              <button type="button" class="card card-mint card-interactive card-btn" onclick="InPartenzaModule.openTripDetails('${trip.ID_InPartenza}')" aria-label="Scheda partenza: ${trip.Nome_Viaggio}. ${dateText}. Budget previsto ${budget} Euro. Tipologia: ${trip.Tipologia_Viaggio || 'Pianificato'}. Apri dettagli partenza.">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
                   <h2 style="color: var(--mint); margin: 0; border: none;">${trip.Nome_Viaggio}</h2>
                   <span class="btn btn-sm btn-pink">${trip.Tipologia_Viaggio || 'Pianificato'}</span>
@@ -70,10 +73,10 @@ const InPartenzaModule = {
                   BUDGET PREVISTO EURO ${budget.toLocaleString('it-IT')}
                 </p>
                 <p style="color: #ccc; font-size: 0.9rem;">
-                  📅 ${trip.Data_Inizio_Globale ? `Dal ${trip.Data_Inizio_Globale} al ${trip.Data_Fine_Globale || '-'}` : 'Date in fase di definizione'}
+                  📅 ${dStart && dEnd ? `Dal ${dStart} al ${dEnd}` : (dStart || 'Date in fase di definizione')}
                   ${trip.Stati ? ` | 📍 ${trip.Stati.replace(/\n/g, ', ')}` : ''}
                 </p>
-              </div>
+              </button>
             `;
           }).join('')}
         </div>
@@ -97,17 +100,20 @@ const InPartenzaModule = {
   openNewTripForm() {
     this.activeTripId = null;
     this.currentView = 'form';
+    App.currentModule = 'in-partenza';
     App.render();
   },
 
   openTripDetails(tripId) {
     this.activeTripId = tripId;
     this.currentView = 'detail';
+    App.currentModule = 'in-partenza';
     App.render();
   },
 
   openArchiveView() {
     this.currentView = 'archive';
+    App.currentModule = 'in-partenza';
     App.render();
   },
 
@@ -122,6 +128,8 @@ const InPartenzaModule = {
     }
 
     const budget = this.calculateTripBudget(trip);
+    const dStart = CONFIG.formatDateDisplay(trip.Data_Inizio_Globale);
+    const dEnd = CONFIG.formatDateDisplay(trip.Data_Fine_Globale);
 
     // Parse Tickets and Hotels
     let tickets = [];
@@ -163,16 +171,22 @@ const InPartenzaModule = {
         <h2>DATI DI MASSIMA</h2>
         <div class="table-responsive">
           <table class="table-closed">
+            <thead>
+              <tr>
+                <th scope="col" style="width: 35%;">CAMPO</th>
+                <th scope="col">DETTAGLIO</th>
+              </tr>
+            </thead>
             <tbody>
-              <tr><th style="width: 35%;">STATI PREVISTI</th><td>${(trip.Stati || '-').replace(/\n/g, '<br>')}</td></tr>
-              <tr><th>CITTÀ / TAPPE</th><td>${(trip.Citta || '-').replace(/\n/g, '<br>')}</td></tr>
-              <tr><th>DATA PARTENZA</th><td>${trip.Data_Inizio_Globale || '-'}</td></tr>
-              <tr><th>DATA RIENTRO</th><td>${trip.Data_Fine_Globale || '-'}</td></tr>
-              <tr><th>TIPOLOGIA VIAGGIO</th><td>${trip.Tipologia_Viaggio || '-'}</td></tr>
-              <tr><th>MEZZI UTILIZZATI</th><td>${trip.Mezzi_Usati || '-'} ${trip.Specifiche_Mezzo_Altro ? `(${trip.Specifiche_Mezzo_Altro})` : ''}</td></tr>
-              <tr><th>SCOPO DEL VIAGGIO</th><td>${trip.Scopo_Viaggio || '-'} ${trip.Specifiche_Scopo_Altro ? `(${trip.Specifiche_Scopo_Altro})` : ''}</td></tr>
-              <tr><th>CARTELLA GOOGLE DRIVE</th><td>${trip.Link_Cartella_Drive ? `<a href="${trip.Link_Cartella_Drive}" target="_blank" rel="noopener" style="color: var(--mint); word-break: break-all;">${trip.Link_Cartella_Drive}</a>` : '-'}</td></tr>
-              <tr><th>NOTE E PREPARAZIONE</th><td>${(trip.Note_Preparazione || '-').replace(/\n/g, '<br>')}</td></tr>
+              <tr><th scope="row">STATI PREVISTI</th><td>${(trip.Stati || '-').replace(/\n/g, '<br>')}</td></tr>
+              <tr><th scope="row">CITTÀ / TAPPE</th><td>${(trip.Citta || '-').replace(/\n/g, '<br>')}</td></tr>
+              <tr><th scope="row">DATA PARTENZA</th><td>${dStart || '-'}</td></tr>
+              <tr><th scope="row">DATA RIENTRO</th><td>${dEnd || '-'}</td></tr>
+              <tr><th scope="row">TIPOLOGIA VIAGGIO</th><td>${trip.Tipologia_Viaggio || '-'}</td></tr>
+              <tr><th scope="row">MEZZI UTILIZZATI</th><td>${trip.Mezzi_Usati || '-'} ${trip.Specifiche_Mezzo_Altro ? `(${trip.Specifiche_Mezzo_Altro})` : ''}</td></tr>
+              <tr><th scope="row">SCOPO DEL VIAGGIO</th><td>${trip.Scopo_Viaggio || '-'} ${trip.Specifiche_Scopo_Altro ? `(${trip.Specifiche_Scopo_Altro})` : ''}</td></tr>
+              <tr><th scope="row">CARTELLA GOOGLE DRIVE</th><td>${trip.Link_Cartella_Drive ? `<a href="${trip.Link_Cartella_Drive}" target="_blank" rel="noopener" style="color: var(--mint); word-break: break-all;">${trip.Link_Cartella_Drive}</a>` : '-'}</td></tr>
+              <tr><th scope="row">NOTE E PREPARAZIONE</th><td>${(trip.Note_Preparazione || '-').replace(/\n/g, '<br>')}</td></tr>
             </tbody>
           </table>
         </div>
@@ -184,9 +198,14 @@ const InPartenzaModule = {
         ${Array.isArray(tickets) && tickets.length > 0 ? `
           <div class="table-responsive">
             <table class="table-closed">
-              <thead><tr><th>#</th><th>DETTAGLI BIGLIETTO</th></tr></thead>
+              <thead>
+                <tr>
+                  <th scope="col" style="width: 25%;">#</th>
+                  <th scope="col">DETTAGLI BIGLIETTO</th>
+                </tr>
+              </thead>
               <tbody>
-                ${tickets.map((t, idx) => `<tr><th style="width: 25%;">BIGLIETTO ${idx + 1}</th><td>${String(t).replace(/\n/g, '<br>')}</td></tr>`).join('')}
+                ${tickets.map((t, idx) => `<tr><th scope="row">BIGLIETTO ${idx + 1}</th><td>${String(t).replace(/\n/g, '<br>')}</td></tr>`).join('')}
               </tbody>
             </table>
           </div>
@@ -199,9 +218,14 @@ const InPartenzaModule = {
         ${Array.isArray(hotels) && hotels.length > 0 ? `
           <div class="table-responsive">
             <table class="table-closed">
-              <thead><tr><th>#</th><th>DETTAGLI HOTEL</th></tr></thead>
+              <thead>
+                <tr>
+                  <th scope="col" style="width: 25%;">#</th>
+                  <th scope="col">DETTAGLI HOTEL</th>
+                </tr>
+              </thead>
               <tbody>
-                ${hotels.map((h, idx) => `<tr><th style="width: 25%;">HOTEL ${idx + 1}</th><td>${String(h).replace(/\n/g, '<br>')}</td></tr>`).join('')}
+                ${hotels.map((h, idx) => `<tr><th scope="row">HOTEL ${idx + 1}</th><td>${String(h).replace(/\n/g, '<br>')}</td></tr>`).join('')}
               </tbody>
             </table>
           </div>
@@ -213,11 +237,16 @@ const InPartenzaModule = {
         <h2>DETTAGLIO BUDGET ANALITICO</h2>
         <div class="table-responsive">
           <table class="table-closed">
-            <thead><tr><th>CATEGORIA SPESA</th><th>IMPORTO PREVISTO</th></tr></thead>
+            <thead>
+              <tr>
+                <th scope="col">CATEGORIA SPESA</th>
+                <th scope="col">IMPORTO PREVISTO</th>
+              </tr>
+            </thead>
             <tbody>
               ${CONFIG.EXPENSE_CATEGORIES.map(cat => {
                 const val = trip[cat.key] || 0;
-                return `<tr><th>${cat.label}</th><td>€ ${Number(val).toLocaleString('it-IT')}</td></tr>`;
+                return `<tr><th scope="row">${cat.label}</th><td>€ ${Number(val).toLocaleString('it-IT')}</td></tr>`;
               }).join('')}
             </tbody>
           </table>
@@ -495,8 +524,8 @@ const InPartenzaModule = {
       Nome_Viaggio: document.getElementById('inp-nome').value.trim(),
       Stati: document.getElementById('inp-stati').value.trim(),
       Citta: document.getElementById('inp-citta').value.trim(),
-      Data_Inizio_Globale: document.getElementById('inp-data-inizio').value,
-      Data_Fine_Globale: document.getElementById('inp-data-fine').value,
+      Data_Inizio_Globale: CONFIG.normalizeDateStr(document.getElementById('inp-data-inizio').value),
+      Data_Fine_Globale: CONFIG.normalizeDateStr(document.getElementById('inp-data-fine').value),
       Link_Cartella_Drive: document.getElementById('inp-drive').value.trim(),
       Mezzi_Usati: mezziChecked,
       Specifiche_Mezzo_Altro: hasMezziAltro ? document.getElementById('inp-mezzi-altro').value.trim() : "",
@@ -666,17 +695,21 @@ const InPartenzaModule = {
 
       ${archiveTrips.length > 0 ? `
         <div class="trips-list">
-          ${archiveTrips.map(trip => `
-            <div class="card card-mint">
-              <h2 style="color: var(--mint); margin-top: 0; border: none;">${trip.Nome_Viaggio}</h2>
-              <p style="color: #ccc;">
-                📅 Svolto: <strong>${trip.Data_Inizio_Globale || '-'} -> ${trip.Data_Fine_Globale || '-'}</strong> | 📍 Stati: <strong>${trip.Stati || '-'}</strong>
-              </p>
-              <button class="btn btn-sm btn-primary" style="margin-top: 10px;" onclick="InPartenzaModule.openArchivePdf('${trip.ID_Archivio}')">
-                📄 GENERA REPORT PDF ARCHIVIO
-              </button>
-            </div>
-          `).join('')}
+          ${archiveTrips.map(trip => {
+            const dStart = CONFIG.formatDateDisplay(trip.Data_Inizio_Globale);
+            const dEnd = CONFIG.formatDateDisplay(trip.Data_Fine_Globale);
+            return `
+              <div class="card card-mint">
+                <h2 style="color: var(--mint); margin-top: 0; border: none;">${trip.Nome_Viaggio}</h2>
+                <p style="color: #ccc;">
+                  📅 Svolto: <strong>${dStart && dEnd ? `${dStart} -> ${dEnd}` : (dStart || '-')}</strong> | 📍 Stati: <strong>${trip.Stati || '-'}</strong>
+                </p>
+                <button class="btn btn-sm btn-primary" style="margin-top: 10px;" onclick="InPartenzaModule.openArchivePdf('${trip.ID_Archivio}')">
+                  📄 GENERA REPORT PDF ARCHIVIO
+                </button>
+              </div>
+            `;
+          }).join('')}
         </div>
       ` : `
         <div class="empty-state">

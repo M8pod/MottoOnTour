@@ -18,8 +18,20 @@ const HomeModule = {
     const visitedCount = visitedStatesSet.size;
     const worldPercentage = ((visitedCount / CONFIG.TOTAL_WORLD_COUNTRIES) * 100).toFixed(1).replace('.', ',');
 
-    // 2. Ultimo Viaggio Calculation
-    const lastTrip = diarioTrips.length > 0 ? diarioTrips[diarioTrips.length - 1] : null;
+    // 2. Ultimo Viaggio Calculation (ultimo viaggio completato in ordine cronologico di data di fine)
+    const sortedDiario = [...diarioTrips].sort((a, b) => {
+      const getEndDate = (t) => {
+        if (t.Data_Fine_Globale) return new Date(t.Data_Fine_Globale).getTime();
+        if (t.Data_Inizio_Globale) return new Date(t.Data_Inizio_Globale).getTime();
+        if (t.Anno_Viaggio) {
+          const y = parseInt(String(t.Anno_Viaggio).match(/\d{4}/)?.[0] || '0');
+          if (y > 0) return new Date(y, 11, 31).getTime();
+        }
+        return 0;
+      };
+      return getEndDate(b) - getEndDate(a);
+    });
+    const lastTrip = sortedDiario.length > 0 ? sortedDiario[0] : null;
 
     // 3. Prossimo Viaggio / Sei in viaggio Calculation
     let nextTrip = null;
@@ -52,6 +64,38 @@ const HomeModule = {
       }
     }
 
+    // Helper date strings for visual & VoiceOver
+    let lastTripDateDisplay = "";
+    let lastTripDateAria = "";
+    if (lastTrip) {
+      if (lastTrip.Data_Inizio_Globale && lastTrip.Data_Fine_Globale) {
+        const d1 = CONFIG.formatDateDisplay(lastTrip.Data_Inizio_Globale);
+        const d2 = CONFIG.formatDateDisplay(lastTrip.Data_Fine_Globale);
+        lastTripDateDisplay = `DAL ${d1} AL ${d2}`;
+        lastTripDateAria = `dal ${d1} al ${d2}`;
+      } else if (lastTrip.Data_Inizio_Globale) {
+        const d1 = CONFIG.formatDateDisplay(lastTrip.Data_Inizio_Globale);
+        lastTripDateDisplay = `DATA ${d1}`;
+        lastTripDateAria = `data ${d1}`;
+      } else if (lastTrip.Anno_Viaggio) {
+        lastTripDateDisplay = `ANNO ${lastTrip.Anno_Viaggio}`;
+        lastTripDateAria = `anno ${lastTrip.Anno_Viaggio}`;
+      }
+    }
+
+    let nextTripDateDisplay = "";
+    let nextTripDateAria = "";
+    if (nextTrip) {
+      if (nextTrip.Data_Inizio_Globale) {
+        const d1 = CONFIG.formatDateDisplay(nextTrip.Data_Inizio_Globale);
+        nextTripDateDisplay = d1;
+        nextTripDateAria = `data di partenza ${d1}`;
+      } else {
+        nextTripDateDisplay = "Data da definire";
+        nextTripDateAria = "data da definire";
+      }
+    }
+
     container.innerHTML = `
       <div class="action-bar" style="justify-content: space-between;">
         <h1 id="screen-title" tabindex="-1">MOTTO ON TOUR</h1>
@@ -64,7 +108,7 @@ const HomeModule = {
       <section class="card" aria-labelledby="heading-stat-geo">
         <h2 id="heading-stat-geo">STATISTICA GEOGRAFICA</h2>
         
-        <div id="home-world-map" class="map-container" style="height: 280px;" aria-label="Mappa interattiva del mondo dei paesi visitati"></div>
+        <div id="home-world-map" class="map-container" style="height: 280px;" aria-hidden="true"></div>
 
         <div style="margin-top: 12px;">
           ${visitedCount > 0 ? `
@@ -88,16 +132,16 @@ const HomeModule = {
       <section class="card" aria-labelledby="heading-last-trip">
         <h2 id="heading-last-trip">ULTIMO VIAGGIO</h2>
         ${lastTrip ? `
-          <div class="card card-mint card-interactive" onclick="DiarioModule.openTripDetails('${lastTrip.ID_Viaggio}')" role="button" tabindex="0" aria-label="Apri dettagli ultimo viaggio: ${lastTrip.Nome_Viaggio}">
+          <button type="button" class="card card-mint card-interactive card-btn" onclick="DiarioModule.openTripDetails('${lastTrip.ID_Viaggio}')" aria-label="Ultimo viaggio: ${lastTrip.Nome_Viaggio}. ${lastTripDateAria}. Tipologia: ${lastTrip.Tipologia_Viaggio || 'Standard'}. Stati: ${(lastTrip.Stati || '-').replace(/\n/g, ', ')}. Apri dettagli viaggio.">
             <h3 style="color: var(--mint); margin-top: 0;">${lastTrip.Nome_Viaggio}</h3>
             <p style="color: var(--pink-light); font-weight: 700;">
-              ${lastTrip.Data_Inizio_Globale && lastTrip.Data_Fine_Globale ? `DAL ${lastTrip.Data_Inizio_Globale} AL ${lastTrip.Data_Fine_Globale}` : (lastTrip.Anno_Viaggio ? `ANNO ${lastTrip.Anno_Viaggio}` : '')}
+              ${lastTripDateDisplay}
             </p>
             <p style="color: #ccc; margin-top: 4px;">
-              Tipologia: <strong>${lastTrip.Tipologia_Viaggio || 'Standard'}</strong> | Stati: <strong>${lastTrip.Stati || '-'}</strong>
+              Tipologia: <strong>${lastTrip.Tipologia_Viaggio || 'Standard'}</strong> | Stati: <strong>${(lastTrip.Stati || '-').replace(/\n/g, ', ')}</strong>
             </p>
             <span class="btn btn-sm btn-primary" style="margin-top: 10px; pointer-events: none;">VEDI SCHEDA VIAGGIO ➔</span>
-          </div>
+          </button>
         ` : `
           <div class="empty-state">
             <p class="empty-state-text">NESSUN VIAGGIO ANCORA REGISTRATO</p>
@@ -112,7 +156,7 @@ const HomeModule = {
       <section class="card" aria-labelledby="heading-next-trip">
         <h2 id="heading-next-trip">PROSSIMO VIAGGIO</h2>
         ${nextTrip ? `
-          <div class="card card-mint card-interactive" onclick="InPartenzaModule.openTripDetails('${nextTrip.ID_InPartenza}')" role="button" tabindex="0" aria-label="Apri dettagli partenza: ${nextTrip.Nome_Viaggio}">
+          <button type="button" class="card card-mint card-interactive card-btn" onclick="InPartenzaModule.openTripDetails('${nextTrip.ID_InPartenza}')" aria-label="Prossimo viaggio: ${nextTrip.Nome_Viaggio}. ${isOngoing ? 'Sei attualmente in viaggio!' : (daysDiff !== null ? `Mancano ${daysDiff} giorni.` : '')} ${nextTripDateAria}. Tipologia: ${nextTrip.Tipologia_Viaggio || 'Pianificato'}. Apri pianificazione.">
             <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
               <h3 style="color: var(--mint); margin: 0;">${nextTrip.Nome_Viaggio}</h3>
               ${isOngoing ? `
@@ -122,10 +166,10 @@ const HomeModule = {
               ` : '')}
             </div>
             <p style="color: var(--pink-light); margin-top: 6px;">
-              Tipologia: <strong>${nextTrip.Tipologia_Viaggio || 'Pianificato'}</strong> | Partenza: <strong>${nextTrip.Data_Inizio_Globale || 'Data da definire'}</strong>
+              Tipologia: <strong>${nextTrip.Tipologia_Viaggio || 'Pianificato'}</strong> | Partenza: <strong>${nextTripDateDisplay}</strong>
             </p>
             <span class="btn btn-sm btn-primary" style="margin-top: 10px; pointer-events: none;">VEDI PIANIFICAZIONE ➔</span>
-          </div>
+          </button>
         ` : `
           <div class="empty-state">
             <p class="empty-state-text">NESSUN VIAGGIO ALL'ORIZZONTE</p>

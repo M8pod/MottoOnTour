@@ -35,6 +35,7 @@ const API = {
       try {
         const parsed = JSON.parse(local);
         this.data = { ...this.data, ...parsed };
+        this.normalizeAllDataDates();
         const savedSync = localStorage.getItem('motto_last_sync');
         if (savedSync) this.lastSyncTime = new Date(savedSync);
       } catch (e) {}
@@ -44,6 +45,32 @@ const API = {
       GeoUtils.initCustomCitiesCache();
     }
     this.repairCachedCoordinates();
+  },
+
+  normalizeAllDataDates() {
+    [CONFIG.SHEETS.DIARIO, CONFIG.SHEETS.IN_PARTENZA, CONFIG.SHEETS.ARCHIVIO].forEach(sheet => {
+      if (this.data[sheet] && Array.isArray(this.data[sheet])) {
+        this.data[sheet].forEach(trip => {
+          if (trip.Data_Inizio_Globale) {
+            trip.Data_Inizio_Globale = CONFIG.normalizeDateStr(trip.Data_Inizio_Globale);
+          }
+          if (trip.Data_Fine_Globale) {
+            trip.Data_Fine_Globale = CONFIG.normalizeDateStr(trip.Data_Fine_Globale);
+          }
+        });
+      }
+    });
+
+    if (this.data[CONFIG.SHEETS.SFIDE] && Array.isArray(this.data[CONFIG.SHEETS.SFIDE])) {
+      this.data[CONFIG.SHEETS.SFIDE].forEach(ch => {
+        if (!ch.Blocco_Voci_JSON && ch.Bloccco_Voci_JSON) {
+          ch.Blocco_Voci_JSON = ch.Bloccco_Voci_JSON;
+        }
+        if (!ch.Bloccco_Voci_JSON && ch.Blocco_Voci_JSON) {
+          ch.Bloccco_Voci_JSON = ch.Blocco_Voci_JSON;
+        }
+      });
+    }
   },
 
   saveLocalCache() {
@@ -104,6 +131,7 @@ const API = {
 
   async fetchAllData(force = false) {
     if (!force && this.data && Object.values(this.data).some(arr => arr.length > 0)) {
+      this.normalizeAllDataDates();
       await this.repairCachedCoordinates();
       return this.data;
     }
@@ -112,6 +140,7 @@ const API = {
       const res = await this.request('getAllData', {}, true);
       if (res && res.status === 'success' && res.data) {
         this.data = { ...this.data, ...res.data };
+        this.normalizeAllDataDates();
         await this.reconcileCoordinates();
         this.lastSyncTime = new Date();
         this.saveLocalCache();
@@ -120,6 +149,7 @@ const API = {
     } catch (err) {
       console.warn("Could not fetch remote data, using local cache:", err);
     }
+    this.normalizeAllDataDates();
     await this.reconcileCoordinates();
     return this.data;
   },
@@ -147,6 +177,23 @@ const API = {
   },
 
   async saveRecord(sheetName, record, idKey) {
+    // Normalize date fields if present
+    if (record.Data_Inizio_Globale) {
+      record.Data_Inizio_Globale = CONFIG.normalizeDateStr(record.Data_Inizio_Globale);
+    }
+    if (record.Data_Fine_Globale) {
+      record.Data_Fine_Globale = CONFIG.normalizeDateStr(record.Data_Fine_Globale);
+    }
+
+    // Ensure Sfide compatibility with both header spellings
+    if (sheetName === CONFIG.SHEETS.SFIDE) {
+      if (record.Blocco_Voci_JSON && !record.Bloccco_Voci_JSON) {
+        record.Bloccco_Voci_JSON = record.Blocco_Voci_JSON;
+      } else if (record.Bloccco_Voci_JSON && !record.Blocco_Voci_JSON) {
+        record.Blocco_Voci_JSON = record.Bloccco_Voci_JSON;
+      }
+    }
+
     // 1. Optimistic local update with full clean replacement
     if (!this.data[sheetName]) this.data[sheetName] = [];
     

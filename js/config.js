@@ -20,6 +20,43 @@ const CONFIG = {
     "#00E5D8"  // 8. Verde acqua
   ],
 
+  // Formatta data da YYYY-MM-DD o ISO a GG/MM/AAAA (giorno/mese/anno) per la visualizzazione
+  formatDateDisplay(dateStr) {
+    if (!dateStr) return "";
+    const clean = String(dateStr).trim();
+    if (!clean) return "";
+    // Se già in formato GG/MM/AAAA
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(clean)) return clean;
+    // Se ISO string o YYYY-MM-DD
+    const isoClean = clean.split("T")[0];
+    const parts = isoClean.split("-");
+    if (parts.length === 3 && parts[0].length === 4) {
+      return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
+    }
+    return clean;
+  },
+
+  // Normalizza stringhe data evitando sfasamenti di fuso orario UTC
+  normalizeDateStr(val) {
+    if (!val) return "";
+    const s = String(val).trim();
+    if (s.includes('T')) {
+      const d = new Date(s);
+      if (!isNaN(d.getTime())) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+      }
+    }
+    // Se formato GG/MM/AAAA, converti in YYYY-MM-DD per memorizzazione interna
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
+      const p = s.split("/");
+      return `${p[2]}-${p[1]}-${p[0]}`;
+    }
+    return s.split('T')[0].trim();
+  },
+
   // Sintetizza le voci della legenda in 1-2 parole riassuntive
   shortenChartLabel(label) {
     if (!label) return "";

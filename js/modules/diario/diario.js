@@ -7,6 +7,7 @@ const DiarioModule = {
   activeTripId: null,
   activeCategory: 'Viaggio aereo',
   activeFilter: 'all', // 'all', 'year', 'roby_ele', 'ciurma', 'budget'
+  previousModule: 'diario',
 
   render(container) {
     if (this.currentView === 'detail') {
@@ -59,15 +60,20 @@ const DiarioModule = {
             <div style="margin-top: 12px;">
               ${preview.length > 0 ? `
                 <div class="trips-list">
-                  ${preview.map(t => `
-                    <div class="card card-mint card-interactive" tabindex="0" onclick="DiarioModule.openTripDetails('${t.ID_Viaggio}')" onkeydown="if(event.key==='Enter') DiarioModule.openTripDetails('${t.ID_Viaggio}')" aria-label="Scheda ${t.Nome_Viaggio}">
-                      <h3 style="color: var(--mint); margin: 0;">${t.Nome_Viaggio}</h3>
-                      <p style="color: #ccc; font-size: 0.9rem; margin-top: 4px;">
-                        📅 ${t.Data_Inizio_Globale && t.Data_Fine_Globale ? `${t.Data_Inizio_Globale} -> ${t.Data_Fine_Globale}` : (t.Anno_Viaggio || '')}
-                        ${t.Stati ? ` | 📍 ${t.Stati.replace(/\n/g, ', ')}` : ''}
-                      </p>
-                    </div>
-                  `).join('')}
+                  ${preview.map(t => {
+                    const dStart = CONFIG.formatDateDisplay(t.Data_Inizio_Globale);
+                    const dEnd = CONFIG.formatDateDisplay(t.Data_Fine_Globale);
+                    const dateText = dStart && dEnd ? `Dal ${dStart} al ${dEnd}` : (dStart ? `Data ${dStart}` : (t.Anno_Viaggio ? `Anno ${t.Anno_Viaggio}` : ''));
+                    return `
+                      <button type="button" class="card card-mint card-interactive card-btn" onclick="DiarioModule.openTripDetails('${t.ID_Viaggio}', 'diario')" aria-label="Scheda viaggio: ${t.Nome_Viaggio}. ${dateText}. ${t.Stati ? `Stati: ${t.Stati.replace(/\n/g, ', ')}.` : ''} Apri dettagli viaggio.">
+                        <h3 style="color: var(--mint); margin: 0;">${t.Nome_Viaggio}</h3>
+                        <p style="color: #ccc; font-size: 0.9rem; margin-top: 4px;">
+                          📅 ${dStart && dEnd ? `${dStart} -> ${dEnd}` : (t.Anno_Viaggio || dStart || '')}
+                          ${t.Stati ? ` | 📍 ${t.Stati.replace(/\n/g, ', ')}` : ''}
+                        </p>
+                      </button>
+                    `;
+                  }).join('')}
                 </div>
               ` : `
                 <p style="color: var(--text-muted); font-size: 0.9rem;">Nessun viaggio registrato in questa categoria.</p>
@@ -82,12 +88,15 @@ const DiarioModule = {
   openNewTripForm() {
     this.activeTripId = null;
     this.currentView = 'form';
+    App.currentModule = 'diario';
     App.render();
   },
 
-  openTripDetails(tripId) {
+  openTripDetails(tripId, previousModule = 'diario') {
     this.activeTripId = tripId;
+    this.previousModule = previousModule;
     this.currentView = 'detail';
+    App.currentModule = 'diario';
     App.render();
   },
 
@@ -95,6 +104,7 @@ const DiarioModule = {
     this.activeCategory = category;
     this.activeFilter = 'all';
     this.currentView = 'see_all';
+    App.currentModule = 'diario';
     App.render();
   },
 
@@ -146,18 +156,21 @@ const DiarioModule = {
           ${catTrips.map(t => {
             let totalBudget = 0;
             CONFIG.EXPENSE_CATEGORIES.forEach(c => totalBudget += Number(t[c.key] || 0));
+            const dStart = CONFIG.formatDateDisplay(t.Data_Inizio_Globale);
+            const dEnd = CONFIG.formatDateDisplay(t.Data_Fine_Globale);
+            const dateText = dStart && dEnd ? `Dal ${dStart} al ${dEnd}` : (dStart ? `Data ${dStart}` : (t.Anno_Viaggio || '-'));
             return `
-              <div class="card card-mint card-interactive" tabindex="0" onclick="DiarioModule.openTripDetails('${t.ID_Viaggio}')" onkeydown="if(event.key==='Enter') DiarioModule.openTripDetails('${t.ID_Viaggio}')" aria-label="Scheda ${t.Nome_Viaggio}">
+              <button type="button" class="card card-mint card-interactive card-btn" onclick="DiarioModule.openTripDetails('${t.ID_Viaggio}', 'diario')" aria-label="Scheda viaggio: ${t.Nome_Viaggio}. ${dateText}. ${totalBudget > 0 ? `Spesa: ${totalBudget} Euro.` : ''} Apri dettagli viaggio.">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
                   <h2 style="color: var(--mint); margin: 0; border: none;">${t.Nome_Viaggio}</h2>
                   ${totalBudget > 0 ? `<span class="stat-value" style="font-size: 1rem;">€ ${totalBudget.toLocaleString('it-IT')}</span>` : ''}
                 </div>
                 <p style="color: #ccc; margin-top: 6px;">
-                  📅 ${t.Data_Inizio_Globale ? `Dal ${t.Data_Inizio_Globale} al ${t.Data_Fine_Globale || '-'}` : (t.Anno_Viaggio || '-')}
+                  📅 ${dStart && dEnd ? `Dal ${dStart} al ${dEnd}` : (t.Anno_Viaggio || dStart || '-')}
                   ${t.Stati ? ` | 📍 ${t.Stati.replace(/\n/g, ', ')}` : ''}
                   ${t.Compagni_Viaggio ? ` | 👥 ${t.Compagni_Viaggio.replace(/\n/g, ', ')}` : ''}
                 </p>
-              </div>
+              </button>
             `;
           }).join('')}
         </div>
@@ -194,11 +207,19 @@ const DiarioModule = {
     const isCruise = String(trip.Tipologia_Viaggio || '').toLowerCase().includes('crociera');
     const citiesList = String(trip.Citta || '').split('\n').map(c => c.trim()).filter(Boolean);
 
+    const dStart = CONFIG.formatDateDisplay(trip.Data_Inizio_Globale);
+    const dEnd = CONFIG.formatDateDisplay(trip.Data_Fine_Globale);
+    const datesHeading = dStart && dEnd ? `DAL ${dStart} AL ${dEnd}` : (dStart ? `DATA ${dStart}` : (trip.Anno_Viaggio ? `ANNO ${trip.Anno_Viaggio}` : ''));
+
+    const backButtonHtml = this.previousModule === 'passaporto'
+      ? `<button class="btn btn-sm btn-pink" onclick="PassaportoModule.openCategory('geografia'); App.navigate('passaporto');">⬅️ TORNA A GEOGRAFIA</button>`
+      : (this.previousModule === 'home'
+        ? `<button class="btn btn-sm btn-pink" onclick="App.navigate('home');">⬅️ TORNA ALLA HOME</button>`
+        : `<button class="btn btn-sm btn-pink" onclick="DiarioModule.currentView='home'; App.render();">⬅️ INDIETRO</button>`);
+
     container.innerHTML = `
       <div class="action-bar">
-        <button class="btn btn-sm btn-pink" onclick="DiarioModule.currentView='home'; App.render();">
-          ⬅️ INDIETRO
-        </button>
+        ${backButtonHtml}
         <button class="btn btn-sm btn-primary" onclick="DiarioModule.currentView='form'; App.render();">
           ✏️ MODIFICA
         </button>
@@ -212,13 +233,13 @@ const DiarioModule = {
 
       <h1 id="screen-title" tabindex="-1" style="margin-bottom: 6px;">${trip.Nome_Viaggio}</h1>
       <p style="color: var(--pink-light); font-weight: 700; margin-bottom: 16px;">
-        ${trip.Data_Inizio_Globale && trip.Data_Fine_Globale ? `DAL ${trip.Data_Inizio_Globale} AL ${trip.Data_Fine_Globale}` : (trip.Anno_Viaggio ? `ANNO ${trip.Anno_Viaggio}` : '')}
+        ${datesHeading}
       </p>
 
       <!-- MAPPA DINAMICA DEL VIAGGIO -->
       <section class="card">
         <h2>MAPPA DEL VIAGGIO</h2>
-        <div id="trip-route-map" class="map-container" style="height: 340px;" aria-label="Mappa tappe ${trip.Nome_Viaggio}"></div>
+        <div id="trip-route-map" class="map-container" style="height: 340px;" aria-hidden="true"></div>
         <p style="color: var(--mint); font-size: 0.9rem;">
           ${isCruise ? '🚢 Rotta Crociera con linea rosa tratteggiata tra le tappe' : '📍 Spilli verde menta sulle città visitate'}
         </p>
@@ -232,15 +253,22 @@ const DiarioModule = {
         <h2>DATI GENERALI E LOGISTICA</h2>
         <div class="table-responsive">
           <table class="table-closed">
+            <thead>
+              <tr>
+                <th scope="col" style="width: 35%;">CAMPO</th>
+                <th scope="col">DETTAGLIO</th>
+              </tr>
+            </thead>
             <tbody>
-              <tr><th style="width: 35%;">STATI VISITATI</th><td>${(trip.Stati || '-').replace(/\n/g, '<br>')}</td></tr>
-              <tr><th>CITTÀ / TAPPE</th><td>${(trip.Citta || '-').replace(/\n/g, '<br>')}</td></tr>
-              <tr><th>TIPOLOGIA VIAGGIO</th><td>${trip.Tipologia_Viaggio || '-'}</td></tr>
-              <tr><th>MEZZI UTILIZZATI</th><td>${trip.Mezzi_Usati || '-'} ${trip.Specifiche_Mezzo_Altro ? `(${trip.Specifiche_Mezzo_Altro})` : ''}</td></tr>
-              <tr><th>COMPAGNIE / VETTORI</th><td>${(trip.Compagnie_Vettori || '-').replace(/\n/g, '<br>')}</td></tr>
-              <tr><th>SCOPO DEL VIAGGIO</th><td>${trip.Scopo_Viaggio || '-'} ${trip.Specifiche_Scopo_Altro ? `(${trip.Specifiche_Scopo_Altro})` : ''}</td></tr>
-              <tr><th>COMPAGNI DI VIAGGIO</th><td>${(trip.Compagni_Viaggio || '-').replace(/\n/g, '<br>')}</td></tr>
-              <tr><th>CARTELLA DRIVE</th><td>${trip.Link_Cartella_Drive ? `<a href="${trip.Link_Cartella_Drive}" target="_blank" rel="noopener" style="color: var(--mint); word-break: break-all;">${trip.Link_Cartella_Drive}</a>` : '-'}</td></tr>
+              <tr><th scope="row">STATI VISITATI</th><td>${(trip.Stati || '-').replace(/\n/g, '<br>')}</td></tr>
+              <tr><th scope="row">CITTÀ / TAPPE</th><td>${(trip.Citta || '-').replace(/\n/g, '<br>')}</td></tr>
+              <tr><th scope="row">DATE VIAGGIO</th><td>${dStart && dEnd ? `${dStart} -> ${dEnd}` : (dStart || trip.Anno_Viaggio || '-')}</td></tr>
+              <tr><th scope="row">TIPOLOGIA VIAGGIO</th><td>${trip.Tipologia_Viaggio || '-'}</td></tr>
+              <tr><th scope="row">MEZZI UTILIZZATI</th><td>${trip.Mezzi_Usati || '-'} ${trip.Specifiche_Mezzo_Altro ? `(${trip.Specifiche_Mezzo_Altro})` : ''}</td></tr>
+              <tr><th scope="row">COMPAGNIE / VETTORI</th><td>${(trip.Compagnie_Vettori || '-').replace(/\n/g, '<br>')}</td></tr>
+              <tr><th scope="row">SCOPO DEL VIAGGIO</th><td>${trip.Scopo_Viaggio || '-'} ${trip.Specifiche_Scopo_Altro ? `(${trip.Specifiche_Scopo_Altro})` : ''}</td></tr>
+              <tr><th scope="row">COMPAGNI DI VIAGGIO</th><td>${(trip.Compagni_Viaggio || '-').replace(/\n/g, '<br>')}</td></tr>
+              <tr><th scope="row">CARTELLA DRIVE</th><td>${trip.Link_Cartella_Drive ? `<a href="${trip.Link_Cartella_Drive}" target="_blank" rel="noopener" style="color: var(--mint); word-break: break-all;">${trip.Link_Cartella_Drive}</a>` : '-'}</td></tr>
             </tbody>
           </table>
         </div>
@@ -252,9 +280,14 @@ const DiarioModule = {
         ${activeExpenses.length > 0 ? `
           <div class="table-responsive">
             <table class="table-closed">
-              <thead><tr><th>CATEGORIA</th><th>SPESA SOSTENUTA</th></tr></thead>
+              <thead>
+                <tr>
+                  <th scope="col">CATEGORIA</th>
+                  <th scope="col">SPESA SOSTENUTA</th>
+                </tr>
+              </thead>
               <tbody>
-                ${activeExpenses.map(e => `<tr><th>${e.label}</th><td>€ ${e.amount.toLocaleString('it-IT')}</td></tr>`).join('')}
+                ${activeExpenses.map(e => `<tr><th scope="row">${e.label}</th><td>€ ${e.amount.toLocaleString('it-IT')}</td></tr>`).join('')}
               </tbody>
             </table>
           </div>
@@ -278,12 +311,18 @@ const DiarioModule = {
         <h2>ESPERIENZE E MEMORIE DEL VIAGGIO</h2>
         <div class="table-responsive">
           <table class="table-closed">
+            <thead>
+              <tr>
+                <th scope="col" style="width: 35%;">SEZIONE</th>
+                <th scope="col">CONTENUTO</th>
+              </tr>
+            </thead>
             <tbody>
-              <tr><th style="width: 35%;">LUOGHI ED ESPERIENZE</th><td>${(trip.Esperienze_Luoghi || '-').replace(/\n/g, '<br>')}</td></tr>
-              <tr><th>SOUVENIR RACCOLTI</th><td>${(trip.Souvenir || '-').replace(/\n/g, '<br>')}</td></tr>
-              <tr><th>MOMENTI DA RICORDARE</th><td>${(trip.Momenti_Da_Ricordare || '-').replace(/\n/g, '<br>')}</td></tr>
-              <tr><th>LINK PODCAST</th><td>${(trip.Link_Podcast || '-').replace(/\n/g, '<br>')}</td></tr>
-              <tr><th>NOTE VARIE</th><td>${(trip.Note_Varie || '-').replace(/\n/g, '<br>')}</td></tr>
+              <tr><th scope="row">LUOGHI ED ESPERIENZE</th><td>${(trip.Esperienze_Luoghi || '-').replace(/\n/g, '<br>')}</td></tr>
+              <tr><th scope="row">SOUVENIR RACCOLTI</th><td>${(trip.Souvenir || '-').replace(/\n/g, '<br>')}</td></tr>
+              <tr><th scope="row">MOMENTI DA RICORDARE</th><td>${(trip.Momenti_Da_Ricordare || '-').replace(/\n/g, '<br>')}</td></tr>
+              <tr><th scope="row">LINK PODCAST</th><td>${(trip.Link_Podcast || '-').replace(/\n/g, '<br>')}</td></tr>
+              <tr><th scope="row">NOTE VARIE</th><td>${(trip.Note_Varie || '-').replace(/\n/g, '<br>')}</td></tr>
             </tbody>
           </table>
         </div>
@@ -581,8 +620,8 @@ const DiarioModule = {
       ID_Viaggio: this.activeTripId || ("ID_DIA_" + Date.now()),
       Nome_Viaggio: document.getElementById('dia-nome').value.trim(),
       Anno_Viaggio: document.getElementById('dia-anno').value.trim(),
-      Data_Inizio_Globale: document.getElementById('dia-data-inizio').value,
-      Data_Fine_Globale: document.getElementById('dia-data-fine').value,
+      Data_Inizio_Globale: CONFIG.normalizeDateStr(document.getElementById('dia-data-inizio').value),
+      Data_Fine_Globale: CONFIG.normalizeDateStr(document.getElementById('dia-data-fine').value),
       Stati: document.getElementById('dia-stati').value.trim(),
       Citta: document.getElementById('dia-citta').value.trim(),
       Link_Cartella_Drive: document.getElementById('dia-drive').value.trim(),

@@ -34,7 +34,7 @@ const CassettoModule = {
       ${dreams.length > 0 ? `
         <div class="trips-list">
           ${dreams.map(d => `
-            <div class="card card-mint card-interactive" tabindex="0" onclick="CassettoModule.openDreamDetail('${d.ID_Sogno}')" onkeydown="if(event.key==='Enter') CassettoModule.openDreamDetail('${d.ID_Sogno}')" aria-label="Sogno ${d.Nome_Viaggio}">
+            <button type="button" class="card card-mint card-interactive card-btn" onclick="CassettoModule.openDreamDetail('${d.ID_Sogno}')" aria-label="Sogno nel cassetto: ${d.Nome_Viaggio}. Tipologia: ${d.Tipologia_Viaggio || 'Idea'}. ${d.Stati ? `Stati: ${d.Stati.replace(/\n/g, ', ')}.` : ''} Apri dettagli sogno.">
               <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
                 <h2 style="color: var(--mint); margin: 0; border: none;">${d.Nome_Viaggio}</h2>
                 <span class="btn btn-sm btn-pink">${d.Tipologia_Viaggio || 'Idea'}</span>
@@ -44,7 +44,7 @@ const CassettoModule = {
                 ${d.Citta ? ` | 🏙️ Zone: <strong>${d.Citta.replace(/\n/g, ', ')}</strong>` : ''}
               </p>
               ${d.Note_Ispirazione ? `<p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 6px; font-style: italic;">"${d.Note_Ispirazione.slice(0, 90)}..."</p>` : ''}
-            </div>
+            </button>
           `).join('')}
         </div>
       ` : `
@@ -61,12 +61,14 @@ const CassettoModule = {
   openNewDreamForm() {
     this.activeDreamId = null;
     this.currentView = 'form';
+    App.currentModule = 'cassetto';
     App.render();
   },
 
   openDreamDetail(id) {
     this.activeDreamId = id;
     this.currentView = 'detail';
+    App.currentModule = 'cassetto';
     App.render();
   },
 
@@ -102,11 +104,17 @@ const CassettoModule = {
         <h2>DETTAGLI DEL SOGNO DI VIAGGIO</h2>
         <div class="table-responsive">
           <table class="table-closed">
+            <thead>
+              <tr>
+                <th scope="col" style="width: 35%;">CAMPO</th>
+                <th scope="col">DETTAGLIO</th>
+              </tr>
+            </thead>
             <tbody>
-              <tr><th style="width: 35%;">STATI IPOTIZZATI</th><td>${(dream.Stati || '-').replace(/\n/g, '<br>')}</td></tr>
-              <tr><th>CITTÀ O ZONE IPOTIZZATE</th><td>${(dream.Citta || '-').replace(/\n/g, '<br>')}</td></tr>
-              <tr><th>TIPOLOGIA VIAGGIO</th><td>${dream.Tipologia_Viaggio || '-'}</td></tr>
-              <tr><th>NOTE E ISPIRAZIONI</th><td>${(dream.Note_Ispirazione || '-').replace(/\n/g, '<br>')}</td></tr>
+              <tr><th scope="row">STATI IPOTIZZATI</th><td>${(dream.Stati || '-').replace(/\n/g, '<br>')}</td></tr>
+              <tr><th scope="row">CITTÀ O ZONE IPOTIZZATE</th><td>${(dream.Citta || '-').replace(/\n/g, '<br>')}</td></tr>
+              <tr><th scope="row">TIPOLOGIA VIAGGIO</th><td>${dream.Tipologia_Viaggio || '-'}</td></tr>
+              <tr><th scope="row">NOTE E ISPIRAZIONI</th><td>${(dream.Note_Ispirazione || '-').replace(/\n/g, '<br>')}</td></tr>
             </tbody>
           </table>
         </div>

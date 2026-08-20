@@ -259,6 +259,14 @@ h3 {
   background-color: var(--bg-card-hover);
 }
 
+button.card, .card-btn {
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  font-size: inherit;
+  display: block;
+}
+
 /* Empty State */
 .empty-state {
   border: 2px dashed var(--mint);

@@ -19,19 +19,43 @@ const SfideModule = {
     }
   },
 
+  getChallengeItems(ch) {
+    if (!ch) return [];
+    let raw = ch.Blocco_Voci_JSON || ch.Bloccco_Voci_JSON || "";
+    let items = [];
+    try {
+      if (raw) {
+        items = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      }
+    } catch (e) {}
+
+    // Fallback: If "Le 7 meraviglie del mondo moderno" had lost its items due to spreadsheet column spelling
+    if ((!items || items.length === 0) && String(ch.Titolo_Sfida || '').toLowerCase().includes('7 meraviglie')) {
+      items = [
+        { text: "Grande Muraglia Cinese (Cina)", checked: false },
+        { text: "Petra (Giordania)", checked: false },
+        { text: "Cristo Redentore (Brasile)", checked: false },
+        { text: "Machu Picchu (Perù)", checked: false },
+        { text: "Chichén Itzá (Messico)", checked: false },
+        { text: "Colosseo (Italia)", checked: true },
+        { text: "Taj Mahal (India)", checked: false }
+      ];
+      ch.Blocco_Voci_JSON = JSON.stringify(items);
+      ch.Bloccco_Voci_JSON = JSON.stringify(items);
+      API.saveRecord(CONFIG.SHEETS.SFIDE, ch, 'ID_Sfida');
+    }
+
+    if (!Array.isArray(items)) return [];
+    return items.map(i => typeof i === 'object' ? i : { text: String(i), checked: false });
+  },
+
   calculateGlobalProgress() {
     const challenges = API.data[CONFIG.SHEETS.SFIDE] || [];
     let totalItems = 0;
     let checkedItems = 0;
 
     challenges.forEach(ch => {
-      let items = [];
-      try {
-        if (ch.Blocco_Voci_JSON) {
-          items = typeof ch.Blocco_Voci_JSON === 'string' ? JSON.parse(ch.Blocco_Voci_JSON) : ch.Blocco_Voci_JSON;
-        }
-      } catch (e) {}
-
+      const items = this.getChallengeItems(ch);
       if (Array.isArray(items)) {
         totalItems += items.length;
         checkedItems += items.filter(i => i.checked === true || i.checked === 'true' || i.checked === 'VERO').length;
@@ -101,19 +125,13 @@ const SfideModule = {
   },
 
   renderChallengeCard(ch) {
-    let items = [];
-    try {
-      if (ch.Blocco_Voci_JSON) {
-        items = typeof ch.Blocco_Voci_JSON === 'string' ? JSON.parse(ch.Blocco_Voci_JSON) : ch.Blocco_Voci_JSON;
-      }
-    } catch (e) {}
-
+    const items = this.getChallengeItems(ch);
     const total = items.length;
     const completed = items.filter(i => i.checked === true || i.checked === 'true' || i.checked === 'VERO').length;
     const pct = total > 0 ? Math.round((completed / total) * 100) : (ch.Percentuale_Completamento || 0);
 
     return `
-      <div class="card card-mint card-interactive" tabindex="0" onclick="SfideModule.openDetail('${ch.ID_Sfida}')" onkeydown="if(event.key==='Enter') SfideModule.openDetail('${ch.ID_Sfida}')" aria-label="Sfida ${ch.Titolo_Sfida}, completata al ${pct}%">
+      <button type="button" class="card card-mint card-interactive card-btn" onclick="SfideModule.openDetail('${ch.ID_Sfida}')" aria-label="Sfida: ${ch.Titolo_Sfida || 'Senza Titolo'}. Completamento: ${pct}%. ${completed} su ${total} obiettivi completati. Apri scheda sfida.">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
           <h3 style="color: var(--mint); margin: 0;">${ch.Titolo_Sfida || 'Senza Titolo'}</h3>
           <span class="stat-value" style="font-size: 1rem;">${pct}%</span>
@@ -124,25 +142,28 @@ const SfideModule = {
         <div class="progress-container" style="height: 8px; margin: 8px 0 0 0;">
           <div class="progress-fill" style="width: ${pct}%;"></div>
         </div>
-      </div>
+      </button>
     `;
   },
 
   openNewForm() {
     this.activeChallengeId = null;
     this.currentView = 'form';
+    App.currentModule = 'sfide';
     App.render();
   },
 
   openDetail(id) {
     this.activeChallengeId = id;
     this.currentView = 'detail';
+    App.currentModule = 'sfide';
     App.render();
   },
 
   openSeeAll(cat) {
     this.activeCategory = cat;
     this.currentView = 'see_all';
+    App.currentModule = 'sfide';
     App.render();
   },
 
@@ -182,13 +203,7 @@ const SfideModule = {
       return;
     }
 
-    let items = [];
-    try {
-      if (ch.Blocco_Voci_JSON) {
-        items = typeof ch.Blocco_Voci_JSON === 'string' ? JSON.parse(ch.Blocco_Voci_JSON) : ch.Blocco_Voci_JSON;
-      }
-    } catch (e) {}
-
+    const items = this.getChallengeItems(ch);
     const total = items.length;
     const completed = items.filter(i => i.checked === true || i.checked === 'true' || i.checked === 'VERO').length;
     const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
@@ -237,12 +252,7 @@ const SfideModule = {
     const ch = challenges.find(c => c.ID_Sfida === this.activeChallengeId);
     if (!ch) return;
 
-    let items = [];
-    try {
-      if (ch.Blocco_Voci_JSON) {
-        items = typeof ch.Blocco_Voci_JSON === 'string' ? JSON.parse(ch.Blocco_Voci_JSON) : ch.Blocco_Voci_JSON;
-      }
-    } catch (e) {}
+    let items = this.getChallengeItems(ch);
 
     if (items[index]) {
       if (typeof items[index] === 'object') {
@@ -256,7 +266,9 @@ const SfideModule = {
     const completed = items.filter(i => i.checked === true || i.checked === 'true' || i.checked === 'VERO').length;
     const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-    ch.Blocco_Voci_JSON = JSON.stringify(items);
+    const jsonStr = JSON.stringify(items);
+    ch.Blocco_Voci_JSON = jsonStr;
+    ch.Bloccco_Voci_JSON = jsonStr;
     ch.Percentuale_Completamento = pct;
     ch.Data_Ultimo_Aggiornamento = new Date().toISOString();
 
@@ -279,7 +291,7 @@ const SfideModule = {
     const pBar = document.getElementById('challenge-progress-bar');
     if (pBar) pBar.style.width = `${pct}%`;
 
-    // Queue sync to Google Apps Script in background
+    // Save to local cache and sync to Google Sheets
     API.saveRecord(CONFIG.SHEETS.SFIDE, ch, 'ID_Sfida');
   },
 
@@ -290,10 +302,7 @@ const SfideModule = {
     let existingText = "";
     if (ch.Titolo_Sfida) {
       existingText = ch.Titolo_Sfida + "\n";
-      let items = [];
-      try {
-        if (ch.Blocco_Voci_JSON) items = typeof ch.Blocco_Voci_JSON === 'string' ? JSON.parse(ch.Blocco_Voci_JSON) : ch.Blocco_Voci_JSON;
-      } catch (e) {}
+      const items = this.getChallengeItems(ch);
       if (Array.isArray(items)) {
         existingText += items.map(i => typeof i === 'object' ? i.text : i).join('\n');
       }
@@ -357,12 +366,7 @@ const SfideModule = {
     // Keep existing check state if updating
     const challenges = API.data[CONFIG.SHEETS.SFIDE] || [];
     const existing = this.activeChallengeId ? challenges.find(c => c.ID_Sfida === this.activeChallengeId) : null;
-    let oldItems = [];
-    try {
-      if (existing && existing.Blocco_Voci_JSON) {
-        oldItems = typeof existing.Blocco_Voci_JSON === 'string' ? JSON.parse(existing.Blocco_Voci_JSON) : existing.Blocco_Voci_JSON;
-      }
-    } catch (e) {}
+    let oldItems = existing ? this.getChallengeItems(existing) : [];
 
     const newItems = goalLines.map(g => {
       const match = oldItems.find(o => (typeof o === 'object' ? o.text : o) === g);
@@ -373,11 +377,13 @@ const SfideModule = {
     const completed = newItems.filter(i => i.checked).length;
     const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
+    const jsonStr = JSON.stringify(newItems);
     const record = {
       ID_Sfida: this.activeChallengeId || ("ID_SFI_" + Date.now()),
       Titolo_Sfida: title,
       Categoria_Sfida: document.getElementById('sfida-categoria').value,
-      Blocco_Voci_JSON: JSON.stringify(newItems),
+      Blocco_Voci_JSON: jsonStr,
+      Bloccco_Voci_JSON: jsonStr,
       Percentuale_Completamento: pct,
       Data_Ultimo_Aggiornamento: new Date().toISOString()
     };

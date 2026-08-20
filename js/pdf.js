@@ -18,7 +18,7 @@ const PDFEngine = {
     return null;
   },
 
-  // Salva il documento PDF su disco consentendo la scelta della cartella (Save As) o tramite download diretto
+  // Salva il documento PDF su disco consentendo la scelta della cartella (Save As), Web Share (su iOS / Android) o tramite download diretto
   async savePDFDocument(doc, filename) {
     App.notify(`Generazione file PDF in corso...`);
     try {
@@ -45,11 +45,31 @@ const PDFEngine = {
             // L'utente ha annullato la finestra di salvataggio
             return;
           }
-          console.warn("showSaveFilePicker non riuscito, fallback su download diretto:", err);
+          console.warn("showSaveFilePicker non riuscito, fallback su Web Share / download:", err);
         }
       }
 
-      // 2. Fallback: Download diretto del file binario PDF nel browser
+      // 2. Web Share API su dispositivi mobili (Consente 'Salva su File', AirDrop, WhatsApp)
+      if (navigator.share && navigator.canShare) {
+        const file = new File([pdfBlob], filename, { type: "application/pdf" });
+        if (navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              title: filename,
+              text: "Ecco il report PDF generato da MOTTO ON TOUR",
+              files: [file]
+            });
+            App.notify(`File PDF condiviso / salvato con successo: ${filename}`);
+            if (typeof SoundFX !== 'undefined' && SoundFX.playConfirm) SoundFX.playConfirm();
+            return;
+          } catch (shareErr) {
+            if (shareErr.name === 'AbortError') return;
+            console.warn("navigator.share PDF error, fallback su download:", shareErr);
+          }
+        }
+      }
+
+      // 3. Fallback: Download diretto del file binario PDF nel browser
       const blobUrl = URL.createObjectURL(pdfBlob);
       const link = document.createElement('a');
       link.href = blobUrl;
@@ -138,7 +158,9 @@ const PDFEngine = {
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(textMain[0], textMain[1], textMain[2]);
-    const datesStr = trip.Data_Inizio_Globale && trip.Data_Fine_Globale ? `Periodo: ${trip.Data_Inizio_Globale} -> ${trip.Data_Fine_Globale}` : (trip.Anno_Viaggio ? `Anno: ${trip.Anno_Viaggio}` : '');
+    const dStart = CONFIG.formatDateDisplay(trip.Data_Inizio_Globale);
+    const dEnd = CONFIG.formatDateDisplay(trip.Data_Fine_Globale);
+    const datesStr = dStart && dEnd ? `Periodo: ${dStart} -> ${dEnd}` : (dStart ? `Data: ${dStart}` : (trip.Anno_Viaggio ? `Anno: ${trip.Anno_Viaggio}` : ''));
     const typeStr = trip.Tipologia_Viaggio ? `Tipologia: ${trip.Tipologia_Viaggio}` : '';
     const infoLine = [datesStr, typeStr, `Generato il: ${new Date().toLocaleDateString('it-IT')}`].filter(Boolean).join(' | ');
     doc.text(infoLine, margin, 43);
@@ -152,7 +174,7 @@ const PDFEngine = {
     if (includeCategories.includes('dati')) {
       const rows = [
         ["Nome Viaggio", trip.Nome_Viaggio || "-"],
-        ["Date di Svolgimento", trip.Data_Inizio_Globale ? `${trip.Data_Inizio_Globale} -> ${trip.Data_Fine_Globale || '-'}` : (trip.Anno_Viaggio || '-')],
+        ["Date di Svolgimento", dStart && dEnd ? `${dStart} -> ${dEnd}` : (dStart || trip.Anno_Viaggio || '-')],
         ["Stati Visitati", trip.Stati || "-"],
         ["Città e Tappe", (trip.Citta || "-").replace(/\n/g, ', ')],
         ["Tipologia Viaggio", trip.Tipologia_Viaggio || "-"],
