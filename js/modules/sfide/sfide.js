@@ -19,17 +19,66 @@ const SfideModule = {
     }
   },
 
+  // Estrazione e normalizzazione ultra-tollerante delle singole voci e checkbox
   getChallengeItems(ch) {
     if (!ch) return [];
-    let raw = ch.Blocco_Voci_JSON || ch.Bloccco_Voci_JSON || "";
-    let items = [];
-    try {
-      if (raw) {
-        items = typeof raw === 'string' ? JSON.parse(raw) : raw;
-      }
-    } catch (e) {}
 
-    // Fallback: If "Le 7 meraviglie del mondo moderno" had lost its items due to spreadsheet column spelling
+    // Recupera la stringa o array da qualsiasi possibile nome di proprietà
+    let raw = ch.Blocco_Voci_JSON || ch.Bloccco_Voci_JSON || ch.Blocco_voci_json || ch.blocco_voci_json || ch.voci || ch.Voci || "";
+    if (!raw) {
+      for (const k of Object.keys(ch)) {
+        if (/voci|blocc/i.test(k) && ch[k]) {
+          raw = ch[k];
+          break;
+        }
+      }
+    }
+
+    let items = [];
+
+    if (Array.isArray(raw)) {
+      items = raw;
+    } else if (typeof raw === 'object' && raw !== null) {
+      items = Object.values(raw);
+    } else if (typeof raw === 'string') {
+      const cleanRaw = raw.trim();
+      if (cleanRaw) {
+        // Tentativo 1: Standard JSON parse
+        try {
+          let parsed = JSON.parse(cleanRaw);
+          if (typeof parsed === 'string') {
+            // Possibile doppio encoding JSON
+            parsed = JSON.parse(parsed);
+          }
+          if (Array.isArray(parsed)) {
+            items = parsed;
+          } else if (typeof parsed === 'object' && parsed !== null) {
+            items = Object.values(parsed);
+          }
+        } catch (e1) {
+          // Tentativo 2: Parsing di testo a capo semplice (se immesso riga per riga)
+          try {
+            const lines = cleanRaw.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+            if (lines.length > 0) {
+              items = lines.map(line => {
+                let isChecked = false;
+                let text = line;
+                if (/^-\s*\[[xX]\]\s*/.test(line)) {
+                  isChecked = true;
+                  text = line.replace(/^-\s*\[[xX]\]\s*/, '');
+                } else if (/^-\s*\[\s*\]\s*/.test(line)) {
+                  isChecked = false;
+                  text = line.replace(/^-\s*\[\s*\]\s*/, '');
+                }
+                return { text: text.trim(), checked: isChecked };
+              });
+            }
+          } catch (e2) {}
+        }
+      }
+    }
+
+    // Fallback storico per la sfida iniziale delle 7 meraviglie
     if ((!items || items.length === 0) && String(ch.Titolo_Sfida || '').toLowerCase().includes('7 meraviglie')) {
       items = [
         { text: "Grande Muraglia Cinese (Cina)", checked: false },
@@ -40,13 +89,30 @@ const SfideModule = {
         { text: "Colosseo (Italia)", checked: true },
         { text: "Taj Mahal (India)", checked: false }
       ];
-      ch.Blocco_Voci_JSON = JSON.stringify(items);
-      ch.Bloccco_Voci_JSON = JSON.stringify(items);
+      const jsonStr = JSON.stringify(items);
+      ch.Blocco_Voci_JSON = jsonStr;
+      ch.Bloccco_Voci_JSON = jsonStr;
       API.saveRecord(CONFIG.SHEETS.SFIDE, ch, 'ID_Sfida');
     }
 
     if (!Array.isArray(items)) return [];
-    return items.map(i => typeof i === 'object' ? i : { text: String(i), checked: false });
+
+    // Normalizzazione uniforme di ogni singolo elemento in { text: string, checked: boolean }
+    return items.map(item => {
+      if (typeof item === 'object' && item !== null) {
+        const text = item.text || item.titolo || item.title || item.name || item.label || item.voce || String(item) || "";
+        const checked = Boolean(
+          item.checked === true ||
+          item.checked === 'true' ||
+          item.checked === 'VERO' ||
+          item.checked === 'vero' ||
+          item.checked === 1 ||
+          item.checked === '1'
+        );
+        return { text: String(text).trim(), checked };
+      }
+      return { text: String(item).trim(), checked: false };
+    }).filter(i => i.text.length > 0);
   },
 
   calculateGlobalProgress() {
@@ -58,12 +124,23 @@ const SfideModule = {
       const items = this.getChallengeItems(ch);
       if (Array.isArray(items)) {
         totalItems += items.length;
-        checkedItems += items.filter(i => i.checked === true || i.checked === 'true' || i.checked === 'VERO').length;
+        checkedItems += items.filter(i => i.checked === true).length;
       }
     });
 
     if (totalItems === 0) return 0;
     return Math.round((checkedItems / totalItems) * 100);
+  },
+
+  async refreshData() {
+    App.notify("Aggiornamento sfide dal cloud...");
+    await API.fetchAllData(true);
+    SoundFX.playConfirm();
+    App.notify("Sfide sincronizzate con successo.");
+    const container = document.getElementById('app-container');
+    if (container && App.currentModule === 'sfide') {
+      this.render(container);
+    }
   },
 
   renderHome(container) {
@@ -72,13 +149,22 @@ const SfideModule = {
 
     const mondoList = challenges.filter(c => String(c.Categoria_Sfida || '').toUpperCase().includes('MONDO'));
     const cittaList = challenges.filter(c => String(c.Categoria_Sfida || '').toUpperCase().includes('CITT'));
+    const altreList = challenges.filter(c => {
+      const cat = String(c.Categoria_Sfida || '').toUpperCase();
+      return !cat.includes('MONDO') && !cat.includes('CITT');
+    });
 
     container.innerHTML = `
-      <div class="action-bar" style="justify-content: space-between;">
+      <div class="action-bar" style="justify-content: space-between; flex-wrap: wrap; gap: 8px;">
         <h1 id="screen-title" tabindex="-1">SFIDE</h1>
-        <button class="btn btn-primary" onclick="SfideModule.openNewForm()">
-          ➕ AGGIUNGI SFIDA
-        </button>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button class="btn btn-sm btn-primary" onclick="SfideModule.refreshData()" aria-label="Sincronizza sfide con il cloud Google Drive">
+            🔄 AGGIORNA SFIDE
+          </button>
+          <button class="btn btn-primary" onclick="SfideModule.openNewForm()">
+            ➕ AGGIUNGI SFIDA
+          </button>
+        </div>
       </div>
 
       <div class="card" style="border-color: var(--mint); margin-bottom: 20px;">
@@ -90,7 +176,7 @@ const SfideModule = {
 
       <!-- SEZIONE 1: SFIDE NEL MONDO -->
       <section class="card">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
           <h2 style="margin: 0; border: none;">SFIDE NEL MONDO (${mondoList.length})</h2>
           ${mondoList.length > 0 ? `
             <button class="btn btn-sm btn-pink" onclick="SfideModule.openSeeAll('SFIDA NEL MONDO')">
@@ -107,7 +193,7 @@ const SfideModule = {
 
       <!-- SEZIONE 2: SFIDE PER CITTÀ -->
       <section class="card">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
           <h2 style="margin: 0; border: none;">SFIDE PER CITTÀ (${cittaList.length})</h2>
           ${cittaList.length > 0 ? `
             <button class="btn btn-sm btn-pink" onclick="SfideModule.openSeeAll('SFIDA PER CITTÀ')">
@@ -121,14 +207,39 @@ const SfideModule = {
           ${cittaList.length === 0 ? `<p style="color: var(--text-muted);">Nessuna sfida creata per questa categoria.</p>` : ''}
         </div>
       </section>
+
+      <!-- SEZIONE 3: ALTRE SFIDE (FALLBACK SICUREZZA) -->
+      ${altreList.length > 0 ? `
+        <section class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <h2 style="margin: 0; border: none;">ALTRE SFIDE (${altreList.length})</h2>
+            <button class="btn btn-sm btn-pink" onclick="SfideModule.openSeeAll('ALTRE SFIDE')">
+              TUTTE LE SFIDE ➔
+            </button>
+          </div>
+
+          <div style="margin-top: 12px;">
+            ${altreList.slice(0, 3).map(ch => this.renderChallengeCard(ch)).join('')}
+          </div>
+        </section>
+      ` : ''}
+
+      ${challenges.length === 0 ? `
+        <div class="empty-state" style="margin-top: 20px;">
+          <p class="empty-state-text">NESSUNA SFIDA ANCORA REGISTRATA</p>
+          <button class="btn btn-primary" style="margin-top: 10px;" onclick="SfideModule.openNewForm()">
+            ➕ CREA LA TUA PRIMA SFIDA
+          </button>
+        </div>
+      ` : ''}
     `;
   },
 
   renderChallengeCard(ch) {
     const items = this.getChallengeItems(ch);
     const total = items.length;
-    const completed = items.filter(i => i.checked === true || i.checked === 'true' || i.checked === 'VERO').length;
-    const pct = total > 0 ? Math.round((completed / total) * 100) : (ch.Percentuale_Completamento || 0);
+    const completed = items.filter(i => i.checked === true).length;
+    const pct = total > 0 ? Math.round((completed / total) * 100) : (Number(ch.Percentuale_Completamento) || 0);
 
     return `
       <button type="button" class="card card-mint card-interactive card-btn" onclick="SfideModule.openDetail('${ch.ID_Sfida}')" aria-label="Sfida: ${ch.Titolo_Sfida || 'Senza Titolo'}. Completamento: ${pct}%. ${completed} su ${total} obiettivi completati. Apri scheda sfida.">
@@ -169,13 +280,27 @@ const SfideModule = {
 
   renderSeeAll(container) {
     const challenges = API.data[CONFIG.SHEETS.SFIDE] || [];
-    const isMondo = this.activeCategory.includes('MONDO');
-    const list = challenges.filter(c => isMondo ? String(c.Categoria_Sfida || '').toUpperCase().includes('MONDO') : String(c.Categoria_Sfida || '').toUpperCase().includes('CITT'));
+    let list = [];
+
+    if (this.activeCategory.includes('MONDO')) {
+      list = challenges.filter(c => String(c.Categoria_Sfida || '').toUpperCase().includes('MONDO'));
+    } else if (this.activeCategory.includes('CITT')) {
+      list = challenges.filter(c => String(c.Categoria_Sfida || '').toUpperCase().includes('CITT'));
+    } else {
+      list = challenges.filter(c => {
+        const cat = String(c.Categoria_Sfida || '').toUpperCase();
+        return !cat.includes('MONDO') && !cat.includes('CITT');
+      });
+      if (list.length === 0) list = challenges;
+    }
 
     container.innerHTML = `
-      <div class="action-bar">
+      <div class="action-bar" style="justify-content: space-between; flex-wrap: wrap; gap: 8px;">
         <button class="btn btn-sm btn-pink" onclick="SfideModule.currentView='home'; App.render();">
           ⬅️ TORNA A SFIDE
+        </button>
+        <button class="btn btn-sm btn-primary" onclick="SfideModule.refreshData()">
+          🔄 AGGIORNA
         </button>
       </div>
 
@@ -195,7 +320,7 @@ const SfideModule = {
 
   renderDetail(container) {
     const challenges = API.data[CONFIG.SHEETS.SFIDE] || [];
-    const ch = challenges.find(c => c.ID_Sfida === this.activeChallengeId);
+    const ch = challenges.find(c => String(c.ID_Sfida) === String(this.activeChallengeId));
 
     if (!ch) {
       this.currentView = 'home';
@@ -205,23 +330,30 @@ const SfideModule = {
 
     const items = this.getChallengeItems(ch);
     const total = items.length;
-    const completed = items.filter(i => i.checked === true || i.checked === 'true' || i.checked === 'VERO').length;
+    const completed = items.filter(i => i.checked === true).length;
     const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
     container.innerHTML = `
-      <div class="action-bar">
-        <button class="btn btn-sm btn-pink" onclick="SfideModule.currentView='home'; App.render();">
-          ⬅️ INDIETRO
-        </button>
-        <button class="btn btn-sm btn-primary" onclick="SfideModule.currentView='form'; App.render();">
-          ✏️ MODIFICA
-        </button>
-        <button class="btn btn-sm btn-danger" onclick="SfideModule.confirmDelete('${ch.ID_Sfida}')">
-          🗑️ ELIMINA
-        </button>
+      <div class="action-bar" style="justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button class="btn btn-sm btn-pink" onclick="SfideModule.currentView='home'; App.render();">
+            ⬅️ INDIETRO
+          </button>
+          <button class="btn btn-sm btn-primary" onclick="SfideModule.refreshData()">
+            🔄 AGGIORNA
+          </button>
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button class="btn btn-sm btn-primary" onclick="SfideModule.currentView='form'; App.render();">
+            ✏️ MODIFICA
+          </button>
+          <button class="btn btn-sm btn-danger" onclick="SfideModule.confirmDelete('${ch.ID_Sfida}')">
+            🗑️ ELIMINA
+          </button>
+        </div>
       </div>
 
-      <h1 id="screen-title" tabindex="-1" style="margin-bottom: 6px;">${ch.Titolo_Sfida}</h1>
+      <h1 id="screen-title" tabindex="-1" style="margin-bottom: 6px;">${ch.Titolo_Sfida || 'Sfida Senza Titolo'}</h1>
       <p class="stat-value" id="challenge-pct-display" style="font-size: 1.25rem; margin-bottom: 12px;">
         COMPLETAMENTO SFIDA ${pct}% (${completed}/${total})
       </p>
@@ -234,14 +366,15 @@ const SfideModule = {
         <h2>OBIETTIVI DA RAGGIUNGERE</h2>
         <div id="challenge-items-list">
           ${items.map((item, idx) => {
-            const isChecked = item.checked === true || item.checked === 'true' || item.checked === 'VERO';
+            const isChecked = item.checked === true;
             return `
               <label class="challenge-item ${isChecked ? 'completed' : ''}" id="item-label-${idx}">
                 <input type="checkbox" class="challenge-checkbox" ${isChecked ? 'checked' : ''} aria-checked="${isChecked}" onchange="SfideModule.toggleItem(${idx}, this.checked)">
-                <span class="challenge-text">${item.text || item}</span>
+                <span class="challenge-text">${item.text}</span>
               </label>
             `;
           }).join('')}
+          ${items.length === 0 ? `<p style="color: var(--text-muted);">Nessun obiettivo registrato per questa sfida.</p>` : ''}
         </div>
       </section>
     `;
@@ -249,21 +382,17 @@ const SfideModule = {
 
   toggleItem(index, isChecked) {
     const challenges = API.data[CONFIG.SHEETS.SFIDE] || [];
-    const ch = challenges.find(c => c.ID_Sfida === this.activeChallengeId);
+    const ch = challenges.find(c => String(c.ID_Sfida) === String(this.activeChallengeId));
     if (!ch) return;
 
     let items = this.getChallengeItems(ch);
 
     if (items[index]) {
-      if (typeof items[index] === 'object') {
-        items[index].checked = isChecked;
-      } else {
-        items[index] = { text: items[index], checked: isChecked };
-      }
+      items[index].checked = isChecked;
     }
 
     const total = items.length;
-    const completed = items.filter(i => i.checked === true || i.checked === 'true' || i.checked === 'VERO').length;
+    const completed = items.filter(i => i.checked === true).length;
     const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
     const jsonStr = JSON.stringify(items);
@@ -272,13 +401,13 @@ const SfideModule = {
     ch.Percentuale_Completamento = pct;
     ch.Data_Ultimo_Aggiornamento = new Date().toISOString();
 
-    // Sound and UI update
+    // Sound e feedback sonoro
     if (isChecked) {
       SoundFX.playChime();
     }
-    App.notify(`Obiettivo aggiornato. Avanzamento sfida: ${pct}%`);
+    App.notify(`Obiettivo ${isChecked ? 'completato' : 'deselezionato'}. Avanzamento sfida: ${pct}%`);
 
-    // Update DOM directly for instant responsive feedback
+    // Aggiornamento DOM diretto per reattività istantanea
     const labelEl = document.getElementById(`item-label-${index}`);
     if (labelEl) {
       if (isChecked) labelEl.classList.add('completed');
@@ -291,20 +420,20 @@ const SfideModule = {
     const pBar = document.getElementById('challenge-progress-bar');
     if (pBar) pBar.style.width = `${pct}%`;
 
-    // Save to local cache and sync to Google Sheets
+    // Sincronizzazione locale e cloud
     API.saveRecord(CONFIG.SHEETS.SFIDE, ch, 'ID_Sfida');
   },
 
   renderForm(container) {
     const challenges = API.data[CONFIG.SHEETS.SFIDE] || [];
-    const ch = this.activeChallengeId ? (challenges.find(c => c.ID_Sfida === this.activeChallengeId) || {}) : {};
+    const ch = this.activeChallengeId ? (challenges.find(c => String(c.ID_Sfida) === String(this.activeChallengeId)) || {}) : {};
 
     let existingText = "";
     if (ch.Titolo_Sfida) {
       existingText = ch.Titolo_Sfida + "\n";
       const items = this.getChallengeItems(ch);
       if (Array.isArray(items)) {
-        existingText += items.map(i => typeof i === 'object' ? i.text : i).join('\n');
+        existingText += items.map(i => i.text).join('\n');
       }
     }
 
@@ -335,7 +464,7 @@ const SfideModule = {
             <p style="color: var(--pink-light); font-size: 0.85rem; margin-bottom: 8px;">
               💡 <strong>Regola di compilazione:</strong> La 1ª riga sarà il Titolo della Sfida. Ogni riga successiva sarà un obiettivo con casella di spunta.
             </p>
-            <textarea id="sfida-testo" class="form-control" style="min-height: 200px;" required placeholder="es. Capitali Europee (Riga 1 = Titolo)&#10;Visitare Parigi (Riga 2 = Obiettivo 1)&#10;Visitare Madrid (Riga 3 = Obiettivo 2)&#10;Visitare Berlino (Riga 4 = Obiettivo 3)">${existingText}</textarea>
+            <textarea id="sfida-testo" class="form-control" style="min-height: 220px;" required placeholder="es. Capitali Europee (Riga 1 = Titolo)&#10;Visitare Parigi (Riga 2 = Obiettivo 1)&#10;Visitare Madrid (Riga 3 = Obiettivo 2)&#10;Visitare Berlino (Riga 4 = Obiettivo 3)">${existingText}</textarea>
           </div>
         </div>
 
@@ -353,35 +482,37 @@ const SfideModule = {
     App.notify("Salvataggio sfida in corso...");
 
     const fullText = document.getElementById('sfida-testo').value;
-    const lines = fullText.split('\n').map(l => l.trim()).filter(Boolean);
+    const lines = fullText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
 
     if (lines.length === 0) {
-      alert("Inserisci almeno il titolo e un obiettivo.");
+      alert("Inserisci almeno il titolo della sfida.");
       return;
     }
 
     const title = lines[0];
     const goalLines = lines.slice(1);
 
-    // Keep existing check state if updating
+    // Conserva lo stato delle spunte esistenti per le voci già presenti
     const challenges = API.data[CONFIG.SHEETS.SFIDE] || [];
-    const existing = this.activeChallengeId ? challenges.find(c => c.ID_Sfida === this.activeChallengeId) : null;
+    const existing = this.activeChallengeId ? challenges.find(c => String(c.ID_Sfida) === String(this.activeChallengeId)) : null;
     let oldItems = existing ? this.getChallengeItems(existing) : [];
 
     const newItems = goalLines.map(g => {
-      const match = oldItems.find(o => (typeof o === 'object' ? o.text : o) === g);
+      const match = oldItems.find(o => o.text === g);
       return { text: g, checked: match ? Boolean(match.checked) : false };
     });
 
     const total = newItems.length;
-    const completed = newItems.filter(i => i.checked).length;
+    const completed = newItems.filter(i => i.checked === true).length;
     const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
     const jsonStr = JSON.stringify(newItems);
+    const challengeId = this.activeChallengeId || ("ID_SFI_" + Date.now());
+
     const record = {
-      ID_Sfida: this.activeChallengeId || ("ID_SFI_" + Date.now()),
+      ID_Sfida: challengeId,
       Titolo_Sfida: title,
-      Categoria_Sfida: document.getElementById('sfida-categoria').value,
+      Categoria_Sfida: document.getElementById('sfida-categoria').value || "SFIDA NEL MONDO",
       Blocco_Voci_JSON: jsonStr,
       Bloccco_Voci_JSON: jsonStr,
       Percentuale_Completamento: pct,
@@ -390,9 +521,9 @@ const SfideModule = {
 
     await API.saveRecord(CONFIG.SHEETS.SFIDE, record, 'ID_Sfida');
     SoundFX.playConfirm();
-    App.notify("Sfida salvata con successo.");
+    App.notify("Sfida salvata e sincronizzata con successo.");
 
-    this.activeChallengeId = record.ID_Sfida;
+    this.activeChallengeId = challengeId;
     this.currentView = 'detail';
     App.render();
   },
@@ -400,7 +531,7 @@ const SfideModule = {
   confirmDelete(id) {
     App.showModal({
       title: "ELIMINA SFIDA",
-      bodyHtml: `<p style="color: var(--danger);">Vuoi davvero eliminare questa sfida?</p>`,
+      bodyHtml: `<p style="color: var(--danger); font-size: 1.05rem;">Vuoi davvero eliminare questa sfida dal database?</p><p style="color: #ccc; margin-top: 8px;">Questa operazione cancellerà la sfida da tutti i dispositivi.</p>`,
       confirmLabel: "🗑️ ELIMINA",
       onConfirm: async () => {
         SoundFX.playAlert();

@@ -24,10 +24,23 @@ const App = {
 
     // Auto-sync on startup if enabled
     if (localStorage.getItem('motto_auto_sync') !== 'false' && this.isUnlocked) {
-      API.fetchAllData().then(() => this.render());
+      API.fetchAllData(true).then(() => this.render());
     } else {
       this.render();
     }
+
+    // Auto-sync on app resume / tab visibility change (iOS Safari / PWA / Mac / Android)
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && this.isUnlocked && navigator.onLine) {
+        API.fetchAllData(true).then(() => this.render());
+      }
+    });
+
+    window.addEventListener('focus', () => {
+      if (this.isUnlocked && navigator.onLine) {
+        API.fetchAllData(true).then(() => this.render());
+      }
+    });
 
     // Register Service Worker
     if ('serviceWorker' in navigator) {
@@ -61,7 +74,8 @@ const App = {
       this.notify("PIN corretto. Benvenuti in Motto on Tour!");
       this.hidePinScreen();
       this.navigate('home');
-      API.fetchAllData().then(() => this.render());
+      // Always force a full remote sync on unlock to pull latest challenges and trips from other devices
+      API.fetchAllData(true).then(() => this.render());
     } else {
       SoundFX.playAlert();
       this.notify("PIN errato. Riprova.");

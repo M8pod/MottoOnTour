@@ -63,11 +63,22 @@ const API = {
 
     if (this.data[CONFIG.SHEETS.SFIDE] && Array.isArray(this.data[CONFIG.SHEETS.SFIDE])) {
       this.data[CONFIG.SHEETS.SFIDE].forEach(ch => {
-        if (!ch.Blocco_Voci_JSON && ch.Bloccco_Voci_JSON) {
-          ch.Blocco_Voci_JSON = ch.Bloccco_Voci_JSON;
+        // Find voices content in any possible property name
+        let voci = ch.Blocco_Voci_JSON || ch.Bloccco_Voci_JSON || ch.Blocco_voci_json || ch.blocco_voci_json || ch.voci || ch.Voci || "";
+        if (!voci) {
+          for (const k of Object.keys(ch)) {
+            if (/voci|blocc/i.test(k) && ch[k]) {
+              voci = ch[k];
+              break;
+            }
+          }
         }
-        if (!ch.Bloccco_Voci_JSON && ch.Blocco_Voci_JSON) {
-          ch.Bloccco_Voci_JSON = ch.Blocco_Voci_JSON;
+        if (voci) {
+          ch.Blocco_Voci_JSON = voci;
+          ch.Bloccco_Voci_JSON = voci;
+        }
+        if (!ch.Categoria_Sfida) {
+          ch.Categoria_Sfida = "SFIDA NEL MONDO";
         }
       });
     }
@@ -130,7 +141,8 @@ const API = {
   },
 
   async fetchAllData(force = false) {
-    if (!force && this.data && Object.values(this.data).some(arr => arr.length > 0)) {
+    // If offline and not forcing a retry, return local data if available
+    if (!navigator.onLine && !force && this.data && Object.values(this.data).some(arr => arr.length > 0)) {
       this.normalizeAllDataDates();
       await this.repairCachedCoordinates();
       return this.data;
