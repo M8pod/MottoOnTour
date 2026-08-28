@@ -393,27 +393,31 @@ const PDFEngine = {
 
     const tables = [
       {
-        title: "1. SINTESI GLOBALE VIAGGI E GEOGRAFIA",
+        title: "1. SINTESI GLOBALE VIAGGI, TEMPO E CHILOMETRI",
         headers: ["Indicatore", "Valore"],
         rows: [
           ["Viaggi Conclusi Totali", String(statsData.totalTrips || "0")],
+          ["Giorni Totali in Viaggio", `${statsData.totalDaysTraveled || 0} giorni ${statsData.totalDaysTraveled >= 365 ? '🏅 (TRAGUARDO 365+ GIORNI)' : ''}`],
+          ["Distanza Complessiva Percorsa", `${statsData.totalKilometersTraveled || '0'} km (${statsData.completedEarthLaps || 0} Giri della Terra 🌐)`],
           ["Stati del Mondo Visitati", `${statsData.visitedStatesCount || 0} / 195 (${statsData.worldPercentage || '0'}%)`],
           ["Città e Tappe Esplorate", String(statsData.totalCitiesCount || "0")],
+          ["Viaggio Top per Intensità (1-10)", String(statsData.topTrip || "N/D")],
           ["Spesa Complessiva Storica", `€ ${statsData.totalSpend || '0'}`],
           ["Souvenir Raccolti nel Mondo", String(statsData.totalSouvenirs || "0")]
         ],
         colWidths: [110, 72]
       },
       {
-        title: "2. RECORD GEOGRAFICI (RIFERIMENTO VENEZIA)",
+        title: "2. RECORD GEOGRAFICI (RIFERIMENTO VENEZIA & POLI)",
         headers: ["Traguardo", "Località / Dato"],
         rows: [
-          ["Città più a Nord", statsData.mostNorth ? `${statsData.mostNorth.Citta} (${statsData.mostNorth.Stato})` : "IN ATTESA DEL PRIMO VIAGGIO"],
-          ["Città più a Sud", statsData.mostSouth ? `${statsData.mostSouth.Citta} (${statsData.mostSouth.Stato})` : "IN ATTESA DEL PRIMO VIAGGIO"],
-          ["Città più a Est", statsData.mostEast ? `${statsData.mostEast.Citta} (${statsData.mostEast.Stato})` : "IN ATTESA DEL PRIMO VIAGGIO"],
-          ["Città più a Ovest", statsData.mostWest ? `${statsData.mostWest.Citta} (${statsData.mostWest.Stato})` : "IN ATTESA DEL PRIMO VIAGGIO"],
+          ["Città più a Nord", statsData.mostNorth ? `${statsData.mostNorth.Citta} (${statsData.mostNorth.Stato}) [${statsData.mostNorth.Latitudine}°]` : "IN ATTESA DEL PRIMO VIAGGIO"],
+          ["Città più a Sud", statsData.mostSouth ? `${statsData.mostSouth.Citta} (${statsData.mostSouth.Stato}) [${statsData.mostSouth.Latitudine}°]` : "IN ATTESA DEL PRIMO VIAGGIO"],
+          ["Città più a Est", statsData.mostEast ? `${statsData.mostEast.Citta} (${statsData.mostEast.Stato}) [${statsData.mostEast.Longitudine}°]` : "IN ATTESA DEL PRIMO VIAGGIO"],
+          ["Città più a Ovest", statsData.mostWest ? `${statsData.mostWest.Citta} (${statsData.mostWest.Stato}) [${statsData.mostWest.Longitudine}°]` : "IN ATTESA DEL PRIMO VIAGGIO"],
           ["Città più Lontana da Venezia", statsData.farthest ? `${statsData.farthest.Citta} (${statsData.farthest.distFromVenice} km)` : "IN ATTESA DEL PRIMO VIAGGIO"],
-          ["Città più Vicina a Venezia", statsData.closest ? `${statsData.closest.Citta} (${statsData.closest.distFromVenice} km)` : "IN ATTESA DEL PRIMO VIAGGIO"]
+          ["Top 3 più vicine al Polo Nord", Array.isArray(statsData.closestToNorthPole) && statsData.closestToNorthPole.length > 0 ? statsData.closestToNorthPole.map((c, i) => `${i+1}. ${c.Citta} (${c.Stato}) [${c.distNorthPoleKm} km]`).join('\n') : "IN ATTESA DEL PRIMO VIAGGIO"],
+          ["Top 3 più vicine al Polo Sud", Array.isArray(statsData.closestToSouthPole) && statsData.closestToSouthPole.length > 0 ? statsData.closestToSouthPole.map((c, i) => `${i+1}. ${c.Citta} (${c.Stato}) [${c.distSouthPoleKm} km]`).join('\n') : "IN ATTESA DEL PRIMO VIAGGIO"]
         ],
         colWidths: [80, 102]
       },

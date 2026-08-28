@@ -325,8 +325,10 @@ const API = {
       const tripId = String(trip.ID_Viaggio || "").trim();
 
       for (let i = 0; i < cities.length; i++) {
-        const city = cities[i];
-        const state = states[i] || states[0] || "ITALIA";
+        const rawCity = cities[i];
+        const parsed = GeoUtils.parseCityAndState(rawCity, states);
+        const city = parsed.city || rawCity;
+        const state = parsed.state || states[i] || states[0] || "ITALIA";
         const cleanCityName = String(city).trim().toUpperCase();
         const cleanStateName = String(state).trim().toUpperCase();
         const coordId = `${cleanCityName}_${cleanStateName}`;

@@ -306,18 +306,21 @@ const InPartenzaModule = {
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="inp-citta">CITTÀ / TAPPE (UNA PER RIGA)</label>
-            <textarea id="inp-citta" class="form-control" placeholder="es. Parigi&#10;Lione">${trip.Citta || ''}</textarea>
+            <label class="form-label" for="inp-citta">CITTÀ / LOCALITÀ (UNA PER RIGA)</label>
+            <p style="color: var(--pink-light); font-size: 0.85rem; margin-top: 2px; margin-bottom: 6px;">
+              💡 <em>Per crociere o tour multi-stato, puoi specificare lo stato a fianco tra parentesi (es. Savona, Marsiglia, Cadice (Spagna), Las Palmas (Spagna)).</em>
+            </p>
+            <textarea id="inp-citta" class="form-control" placeholder="es. Savona&#10;Marsiglia&#10;Barcellona&#10;Cadice (Spagna)&#10;Las Palmas (Spagna)">${trip.Citta || ''}</textarea>
           </div>
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
             <div class="form-group">
               <label class="form-label" for="inp-data-inizio">DATA INIZIO</label>
-              <input type="date" id="inp-data-inizio" class="form-control" value="${trip.Data_Inizio_Globale || ''}" ${trip.Data_Fine_Globale ? `max="${trip.Data_Fine_Globale}"` : ''} onchange="InPartenzaModule.handleDateChange()" oninput="InPartenzaModule.handleDateChange()">
+              <input type="date" id="inp-data-inizio" class="form-control" value="${trip.Data_Inizio_Globale || ''}" ${trip.Data_Fine_Globale ? `max="${trip.Data_Fine_Globale}"` : ''} onchange="InPartenzaModule.handleDateChange()" aria-label="Data inizio viaggio">
             </div>
             <div class="form-group">
               <label class="form-label" for="inp-data-fine">DATA RIENTRO</label>
-              <input type="date" id="inp-data-fine" class="form-control" value="${trip.Data_Fine_Globale || ''}" ${trip.Data_Inizio_Globale ? `min="${trip.Data_Inizio_Globale}"` : ''} onchange="InPartenzaModule.handleDateChange()" oninput="InPartenzaModule.handleDateChange()">
+              <input type="date" id="inp-data-fine" class="form-control" value="${trip.Data_Fine_Globale || ''}" ${trip.Data_Inizio_Globale ? `min="${trip.Data_Inizio_Globale}"` : ''} onchange="InPartenzaModule.handleDateChange()" aria-label="Data rientro viaggio">
             </div>
           </div>
 
@@ -341,7 +344,7 @@ const InPartenzaModule = {
 
           <div class="form-group">
             <label class="form-label" for="inp-tipo">TIPOLOGIA VIAGGIO</label>
-            <select id="inp-tipo" class="form-control">
+            <select id="inp-tipo" class="form-control" aria-label="Tipologia viaggio">
               ${CONFIG.TRIP_TYPES.map(t => `<option value="${t}" ${trip.Tipologia_Viaggio === t ? 'selected' : ''}>${t}</option>`).join('')}
             </select>
           </div>

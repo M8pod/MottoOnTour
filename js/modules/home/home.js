@@ -132,9 +132,12 @@ const HomeModule = {
       <section class="card" aria-labelledby="heading-last-trip">
         <h2 id="heading-last-trip">ULTIMO VIAGGIO</h2>
         ${lastTrip ? `
-          <button type="button" class="card card-mint card-interactive card-btn" onclick="DiarioModule.openTripDetails('${lastTrip.ID_Viaggio}')" aria-label="Ultimo viaggio: ${lastTrip.Nome_Viaggio}. ${lastTripDateAria}. Tipologia: ${lastTrip.Tipologia_Viaggio || 'Standard'}. Stati: ${(lastTrip.Stati || '-').replace(/\n/g, ', ')}. Apri dettagli viaggio.">
-            <h3 style="color: var(--mint); margin-top: 0;">${lastTrip.Nome_Viaggio}</h3>
-            <p style="color: var(--pink-light); font-weight: 700;">
+          <button type="button" class="card card-mint card-interactive card-btn" onclick="DiarioModule.openTripDetails('${lastTrip.ID_Viaggio}')" aria-label="Ultimo viaggio: ${lastTrip.Nome_Viaggio}. ${lastTripDateAria}. ${lastTrip.intensity ? lastTrip.intensity.ariaLabel : ''}. Tipologia: ${lastTrip.Tipologia_Viaggio || 'Standard'}. Stati: ${(lastTrip.Stati || '-').replace(/\n/g, ', ')}. Apri dettagli viaggio.">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+              <h3 style="color: var(--mint); margin: 0;">${lastTrip.Nome_Viaggio}</h3>
+              ${GeoUtils.getIntensityBadgeHtml(lastTrip)}
+            </div>
+            <p style="color: var(--pink-light); font-weight: 700; margin-top: 4px;">
               ${lastTripDateDisplay}
             </p>
             <p style="color: #ccc; margin-top: 4px;">

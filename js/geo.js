@@ -159,10 +159,25 @@ const CITIES_DB = {
   "VALENCIA": { lat: 39.4699, lng: -0.3763, stato: "SPAGNA", continente: "Europa" },
   "SIVIGLIA": { lat: 37.3891, lng: -5.9845, stato: "SPAGNA", continente: "Europa" },
   "MALAGA": { lat: 36.7213, lng: -4.4214, stato: "SPAGNA", continente: "Europa" },
+  "CADICE": { lat: 36.5271, lng: -6.2886, stato: "SPAGNA", continente: "Europa" },
+  "CADIZ": { lat: 36.5271, lng: -6.2886, stato: "SPAGNA", continente: "Europa" },
+  "LAS PALMAS": { lat: 28.1235, lng: -15.4363, stato: "SPAGNA", continente: "Europa" },
+  "LAS PALMAS DE GRAN CANARIA": { lat: 28.1235, lng: -15.4363, stato: "SPAGNA", continente: "Europa" },
+  "SANTA CRUZ DE TENERIFE": { lat: 28.4636, lng: -16.2518, stato: "SPAGNA", continente: "Europa" },
+  "ARRECIFE": { lat: 28.9630, lng: -13.5477, stato: "SPAGNA", continente: "Europa" },
+  "PUERTO DEL ROSARIO": { lat: 28.5004, lng: -13.8627, stato: "SPAGNA", continente: "Europa" },
   "PALMA DI MAIORCA": { lat: 39.5696, lng: 2.6502, stato: "SPAGNA", continente: "Europa" },
   "IBIZA": { lat: 38.9067, lng: 1.4206, stato: "SPAGNA", continente: "Europa" },
   "TENERIFE": { lat: 28.2916, lng: -16.6291, stato: "SPAGNA", continente: "Europa" },
   "GRAN CANARIA": { lat: 27.9202, lng: -15.5474, stato: "SPAGNA", continente: "Europa" },
+  "ALICANTE": { lat: 38.3452, lng: -0.4810, stato: "SPAGNA", continente: "Europa" },
+  "CORDOBA": { lat: 37.8882, lng: -4.7794, stato: "SPAGNA", continente: "Europa" },
+  "GRANADA": { lat: 37.1773, lng: -3.5986, stato: "SPAGNA", continente: "Europa" },
+  "BILBAO": { lat: 43.2630, lng: -2.9350, stato: "SPAGNA", continente: "Europa" },
+  "GIBILTERRA": { lat: 36.1408, lng: -5.3536, stato: "REGNO UNITO", continente: "Europa" },
+  "GIBRALTAR": { lat: 36.1408, lng: -5.3536, stato: "REGNO UNITO", continente: "Europa" },
+  "KOTOR": { lat: 42.4247, lng: 18.7712, stato: "MONTENEGRO", continente: "Europa" },
+  "CATTARO": { lat: 42.4247, lng: 18.7712, stato: "MONTENEGRO", continente: "Europa" },
   "LONDRA": { lat: 51.5074, lng: -0.1278, stato: "REGNO UNITO", continente: "Europa" },
   "EDIMBURGO": { lat: 55.9533, lng: -3.1883, stato: "REGNO UNITO", continente: "Europa" },
   "MANCHESTER": { lat: 53.4808, lng: -2.2426, stato: "REGNO UNITO", continente: "Europa" },
@@ -433,6 +448,256 @@ const GeoUtils = {
     return Math.round(R * c);
   },
 
+  // Dizionario ufficiale dei 10 Bollini di Intensità di Viaggio (Scala da 1 a 10 con titoli e styling ad alto contrasto)
+  INTENSITY_BADGES: {
+    10: {
+      level: 10,
+      badge: "👑 10/10",
+      title: "ODYSSEY SUPREME",
+      subtitle: "Viaggio Leggendario Ultra-Completo",
+      tagColor: "#FAFF00",
+      bgColor: "rgba(250, 255, 0, 0.15)",
+      borderColor: "#FAFF00",
+      ariaLabel: "Bollino 10 su 10: Odyssey Supreme, Viaggio Leggendario Ultra-Completo"
+    },
+    9: {
+      level: 9,
+      badge: "⭐ 9/10",
+      title: "GRAND TOUR EXPLORER",
+      subtitle: "Grande Avventura Transnazionale",
+      tagColor: "#FF80BF",
+      bgColor: "rgba(255, 128, 191, 0.15)",
+      borderColor: "#FF80BF",
+      ariaLabel: "Bollino 9 su 10: Grand Tour Explorer, Grande Avventura Transnazionale"
+    },
+    8: {
+      level: 8,
+      badge: "🚀 8/10",
+      title: "EXPEDITION MASTER",
+      subtitle: "Spedizione Intensa Multi-Tappa",
+      tagColor: "#00FFA3",
+      bgColor: "rgba(0, 255, 163, 0.15)",
+      borderColor: "#00FFA3",
+      ariaLabel: "Bollino 8 su 10: Expedition Master, Spedizione Intensa Multi-Tappa"
+    },
+    7: {
+      level: 7,
+      badge: "💎 7/10",
+      title: "VOYAGE PRESTIGE",
+      subtitle: "Viaggio Ricco ed Esperienziale",
+      tagColor: "#00BFFF",
+      bgColor: "rgba(0, 191, 255, 0.15)",
+      borderColor: "#00BFFF",
+      ariaLabel: "Bollino 7 su 10: Voyage Prestige, Viaggio Ricco ed Esperienziale"
+    },
+    6: {
+      level: 6,
+      badge: "🧭 6/10",
+      title: "GLOBETROTTER GOLD",
+      subtitle: "Itinerario Dinamico e Poliedrico",
+      tagColor: "#00E5D8",
+      bgColor: "rgba(0, 229, 216, 0.15)",
+      borderColor: "#00E5D8",
+      ariaLabel: "Bollino 6 su 10: Globetrotter Gold, Itinerario Dinamico e Poliedrico"
+    },
+    5: {
+      level: 5,
+      badge: "🌟 5/10",
+      title: "DISCOVERY PLUS",
+      subtitle: "Viaggio Equilibrato e Coinvolgente",
+      tagColor: "#FF5500",
+      bgColor: "rgba(255, 85, 0, 0.15)",
+      borderColor: "#FF5500",
+      ariaLabel: "Bollino 5 su 10: Discovery Plus, Viaggio Equilibrato e Coinvolgente"
+    },
+    4: {
+      level: 4,
+      badge: "🎒 4/10",
+      title: "ROAD TRIPPER",
+      subtitle: "Escursione Attiva Fuoriporta",
+      tagColor: "#FF80BF",
+      bgColor: "rgba(255, 128, 191, 0.12)",
+      borderColor: "#FF80BF",
+      ariaLabel: "Bollino 4 su 10: Road Tripper, Escursione Attiva Fuoriporta"
+    },
+    3: {
+      level: 3,
+      badge: "⛵ 3/10",
+      title: "GETAWAY RELAX",
+      subtitle: "Fuga Rilassante e Piacevole",
+      tagColor: "#00FFA3",
+      bgColor: "rgba(0, 255, 163, 0.12)",
+      borderColor: "#00FFA3",
+      ariaLabel: "Bollino 3 su 10: Getaway Relax, Fuga Rilassante e Piacevole"
+    },
+    2: {
+      level: 2,
+      badge: "🌱 2/10",
+      title: "WEEKEND BREAK",
+      subtitle: "Soggiorno Breve e Intimo",
+      tagColor: "#888888",
+      bgColor: "rgba(136, 136, 136, 0.12)",
+      borderColor: "#888888",
+      ariaLabel: "Bollino 2 su 10: Weekend Break, Soggiorno Breve e Intimo"
+    },
+    1: {
+      level: 1,
+      badge: "📍 1/10",
+      title: "MINI ESCAPE BASIC",
+      subtitle: "Gita di Giornata Essenziale",
+      tagColor: "#666666",
+      bgColor: "rgba(102, 102, 102, 0.12)",
+      borderColor: "#666666",
+      ariaLabel: "Bollino 1 su 10: Mini Escape Basic, Gita di Giornata Essenziale"
+    }
+  },
+
+  // Calcolo durata effettiva del viaggio in giorni
+  calculateTripDurationDays(trip) {
+    if (!trip) return 1;
+    if (trip.Data_Inizio_Globale && trip.Data_Fine_Globale) {
+      const startNorm = CONFIG.normalizeDateStr(trip.Data_Inizio_Globale);
+      const endNorm = CONFIG.normalizeDateStr(trip.Data_Fine_Globale);
+      const p1 = startNorm.split('-');
+      const p2 = endNorm.split('-');
+      if (p1.length === 3 && p2.length === 3) {
+        const d1 = new Date(p1[0], p1[1] - 1, p1[2]);
+        const d2 = new Date(p2[0], p2[1] - 1, p2[2]);
+        const diffDays = Math.round((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        if (diffDays > 0) return diffDays;
+      }
+    }
+    if (trip.Durata_Giorni && !isNaN(Number(trip.Durata_Giorni)) && Number(trip.Durata_Giorni) > 0) {
+      return Number(trip.Durata_Giorni);
+    }
+    return 1;
+  },
+
+  // Calcolo distanza chilometrica cumulativa percorsa per un viaggio (con base Venezia e tragitto completo tappe)
+  calculateTripDistanceKm(trip) {
+    if (!trip) return 0;
+    const vLat = CONFIG.VENICE ? CONFIG.VENICE.lat : 45.4408;
+    const vLng = CONFIG.VENICE ? CONFIG.VENICE.lng : 12.3155;
+
+    const cities = String(trip.Citta || '').split('\n').map(c => c.trim()).filter(Boolean);
+    const states = String(trip.Stati || '').split('\n').map(s => s.trim()).filter(Boolean);
+
+    const coords = [];
+    cities.forEach(rawCity => {
+      const parsed = this.parseCityAndState(rawCity, states);
+      const c = this.getCityCoordinates(parsed.city, parsed.state);
+      if (c && c.lat && c.lng) {
+        coords.push({ lat: c.lat, lng: c.lng });
+      }
+    });
+
+    if (coords.length === 0) {
+      if (states.length > 0) {
+        const cInfo = this.getCountryInfo(states[0]);
+        if (cInfo && cInfo.lat && cInfo.lng) {
+          const d = this.calculateDistance(vLat, vLng, cInfo.lat, cInfo.lng);
+          return (d || 0) * 2;
+        }
+      }
+      return 0;
+    }
+
+    let totalKm = 0;
+    // Partenza da Venezia verso la prima tappa
+    totalKm += this.calculateDistance(vLat, vLng, coords[0].lat, coords[0].lng) || 0;
+
+    // Tragitto tra le varie tappe del viaggio
+    for (let i = 0; i < coords.length - 1; i++) {
+      totalKm += this.calculateDistance(coords[i].lat, coords[i].lng, coords[i + 1].lat, coords[i + 1].lng) || 0;
+    }
+
+    // Rientro a Venezia dall'ultima tappa
+    totalKm += this.calculateDistance(coords[coords.length - 1].lat, coords[coords.length - 1].lng, vLat, vLng) || 0;
+
+    return Math.round(totalKm);
+  },
+
+  // Algoritmo di punteggio e attribuzione del Bollino di Intensità da 1 a 10
+  calculateTripIntensityScore(trip) {
+    if (!trip) return this.INTENSITY_BADGES[1];
+    let score = 0;
+
+    // 1. Durata in giorni (max 2.5 punti)
+    const days = this.calculateTripDurationDays(trip);
+    if (days >= 15) score += 2.5;
+    else if (days >= 8) score += 2.0;
+    else if (days >= 4) score += 1.5;
+    else if (days >= 2) score += 1.0;
+    else score += 0.5;
+
+    // 2. Stati e Città visitate (max 2.5 punti)
+    const cities = String(trip.Citta || '').split('\n').map(c => c.trim()).filter(Boolean);
+    const states = String(trip.Stati || '').split('\n').map(s => s.trim()).filter(Boolean);
+    if (states.length >= 3 || cities.length >= 6) score += 2.5;
+    else if (states.length >= 2 || cities.length >= 4) score += 2.0;
+    else if (cities.length >= 2) score += 1.5;
+    else score += 1.0;
+
+    // 3. Varietà Mezzi di Trasporto e Tipologia (max 2.0 punti)
+    const transports = String(trip.Mezzi_Usati || '').split(',').map(m => m.trim()).filter(Boolean);
+    const tripType = String(trip.Tipologia_Viaggio || '').toLowerCase();
+    const isCruise = transports.some(t => t.toLowerCase().includes('crociera') || t.toLowerCase().includes('nave')) || tripType.includes('crociera');
+    if (isCruise || transports.length >= 3) score += 2.0;
+    else if (transports.length === 2) score += 1.5;
+    else score += 1.0;
+
+    // 4. Souvenir e Memorie/Esperienze registrate (max 2.0 punti)
+    const souvenirs = String(trip.Souvenir || '').split('\n').map(s => s.trim()).filter(Boolean);
+    const hasDrive = Boolean(trip.Link_Cartella_Drive && trip.Link_Cartella_Drive.trim().length > 5);
+    const hasNotes = Boolean(trip.Attivita_Esperienze || trip.Note_Personali || trip.Note_Consigli);
+    if (souvenirs.length >= 4) score += 1.0;
+    else if (souvenirs.length >= 1) score += 0.5;
+    if (hasDrive) score += 0.5;
+    if (hasNotes) score += 0.5;
+
+    // 5. Distanza chilometrica percorsa e Budget (max 1.0 punto)
+    const km = this.calculateTripDistanceKm(trip);
+    let totalCost = 0;
+    if (CONFIG.EXPENSE_CATEGORIES) {
+      CONFIG.EXPENSE_CATEGORIES.forEach(cat => {
+        totalCost += Number(trip[cat.key] || 0);
+      });
+    }
+    if (km > 4000 || totalCost > 2500) score += 1.0;
+    else if (km > 1500 || totalCost > 1000) score += 0.5;
+
+    const level = Math.max(1, Math.min(10, Math.round(score)));
+    const badgeInfo = this.INTENSITY_BADGES[level] || this.INTENSITY_BADGES[1];
+
+    return {
+      ...badgeInfo,
+      computedScore: score,
+      level,
+      days,
+      km
+    };
+  },
+
+  // Generatore di template HTML per il Bollino di Intensità (versione badge pill o grande)
+  getIntensityBadgeHtml(trip, isLarge = false) {
+    if (!trip) return "";
+    const info = this.calculateTripIntensityScore(trip);
+    if (isLarge) {
+      return `
+        <div class="intensity-badge-large" style="display: inline-flex; align-items: center; gap: 8px; background: ${info.bgColor}; border: 1.5px solid ${info.borderColor}; border-radius: 8px; padding: 6px 12px; margin-top: 8px; flex-wrap: wrap;" aria-label="${info.ariaLabel}">
+          <span style="font-size: 1.1rem; font-weight: 800; color: ${info.tagColor};">${info.badge}</span>
+          <span style="font-size: 0.95rem; font-weight: 700; color: #FFFFFF;">${info.title}</span>
+          <span style="font-size: 0.8rem; color: #CCCCCC; border-left: 1px solid rgba(255,255,255,0.25); padding-left: 8px;">${info.subtitle}</span>
+        </div>
+      `;
+    }
+    return `
+      <span class="intensity-badge-pill" style="display: inline-flex; align-items: center; gap: 4px; background: ${info.bgColor}; border: 1px solid ${info.borderColor}; color: ${info.tagColor}; font-size: 0.75rem; font-weight: 700; border-radius: 6px; padding: 2px 8px; margin-left: 6px;" aria-label="${info.ariaLabel}">
+        ${info.badge} ${info.title}
+      </span>
+    `;
+  },
+
   deg2rad(deg) {
     return deg * (Math.PI / 180);
   },
@@ -450,11 +715,74 @@ const GeoUtils = {
       .trim();
   },
 
+  // Risolve e normalizza il nome ufficiale dello Stato
+  resolveStateName(stateInput) {
+    if (!stateInput) return "ITALIA";
+    const clean = this.normalizeName(stateInput);
+    for (const [key, aliases] of Object.entries(this.IT_COUNTRY_ALIASES)) {
+      if (clean === key || (aliases && aliases.some(a => this.normalizeName(a) === clean))) {
+        return key;
+      }
+    }
+    if (COUNTRIES_DB[clean]) return clean;
+    return clean;
+  },
+
+  // Parsing avanzato di città e stato opzionale tra parentesi (es. "Cadice (Spagna)" -> { city: "Cadice", state: "SPAGNA", explicit: true })
+  parseCityAndState(rawCityLine, tripStates = []) {
+    if (!rawCityLine) return { city: "", state: "ITALIA", explicit: false };
+    const str = String(rawCityLine).trim();
+    const match = str.match(/^(.*?)\s*\((.*?)\)\s*$/);
+    
+    if (match) {
+      const pureCity = match[1].trim();
+      const rawState = match[2].trim();
+      const resolvedState = this.resolveStateName(rawState) || rawState.toUpperCase();
+      return {
+        city: pureCity,
+        state: resolvedState,
+        explicit: true
+      };
+    }
+
+    const pureCity = str;
+    const cleanCityUpper = pureCity.toUpperCase();
+    
+    // 1. Controlla nel database statico locale CITIES_DB
+    if (CITIES_DB[cleanCityUpper] && CITIES_DB[cleanCityUpper].stato) {
+      const dbState = CITIES_DB[cleanCityUpper].stato.toUpperCase();
+      return { city: pureCity, state: dbState, explicit: false };
+    }
+
+    // 2. Se il viaggio ha 1 solo stato
+    if (tripStates && tripStates.length === 1 && tripStates[0]) {
+      return { city: pureCity, state: this.resolveStateName(tripStates[0]), explicit: false };
+    }
+
+    // 3. Se ci sono più stati nel viaggio, controlla la cache personalizzata per ogni stato
+    if (tripStates && tripStates.length > 1) {
+      try {
+        const localCache = JSON.parse(localStorage.getItem("motto_custom_cities_cache") || "{}");
+        for (const st of tripStates) {
+          const normSt = this.resolveStateName(st);
+          const cacheKey = `${cleanCityUpper}_${normSt}`;
+          if (localCache[cacheKey] && localCache[cacheKey].stato) {
+            return { city: pureCity, state: normSt, explicit: false };
+          }
+        }
+      } catch (e) {}
+      return { city: pureCity, state: this.resolveStateName(tripStates[0]), explicit: false };
+    }
+
+    return { city: pureCity, state: "ITALIA", explicit: false };
+  },
+
   // Risolve le coordinate esatte di una specifica città
   getCityCoordinates(cityName, stateName = "") {
     if (!cityName) return null;
-    const cleanCity = this.normalizeName(cityName);
-    const cleanState = this.normalizeName(stateName);
+    const parsed = this.parseCityAndState(cityName, stateName ? [stateName] : []);
+    const cleanCity = this.normalizeName(parsed.city);
+    const cleanState = this.normalizeName(parsed.state || stateName);
 
     // 1. Corrispondenza esatta nella banca dati città
     if (CITIES_DB[cleanCity]) {
@@ -517,7 +845,7 @@ const GeoUtils = {
     return Number(lat) >= 0 ? "EMISFERO NORD" : "EMISFERO SUD";
   },
 
-  // Calcolo statistiche geografiche con riferimento ufficiale VENEZIA
+  // Calcolo statistiche geografiche con riferimento ufficiale VENEZIA e Poli Nord/Sud
   computeGeoStats(coordinatesList) {
     const validCoords = (coordinatesList || []).filter(c => c.Latitudine !== "" && !isNaN(Number(c.Latitudine)));
     
@@ -528,55 +856,69 @@ const GeoUtils = {
         mostSouth: null,
         mostEast: null,
         mostWest: null,
-        closestToVenice: null,
         farthestFromVenice: null,
         closestToEquator: [],
-        closestToPoles: []
+        closestToNorthPole: [],
+        closestToSouthPole: []
       };
     }
 
     const vLat = CONFIG.VENICE.lat;
     const vLng = CONFIG.VENICE.lng;
 
-    // Distanze da Venezia
+    // Distanze da Venezia e dai Poli
     const withDist = validCoords.map(c => {
       const lat = Number(c.Latitudine);
       const lng = Number(c.Longitudine);
       const dist = this.calculateDistance(vLat, vLng, lat, lng);
       const distEquator = Math.abs(lat);
+      const distNorthPoleKm = Math.round((90 - lat) * 111.139);
+      const distSouthPoleKm = Math.round((lat - (-90)) * 111.139);
+
+      // Pulisci eventuale stato tra parentesi nel nome città
+      const parsed = this.parseCityAndState(c.Citta);
+      const pureCityName = parsed.city || c.Citta;
+
       return {
         ...c,
+        Citta: pureCityName,
         lat,
         lng,
         distFromVenice: dist,
-        distFromEquator: distEquator
+        distFromEquator: distEquator,
+        distNorthPoleKm,
+        distSouthPoleKm
       };
     });
 
+    // Rimuovi duplicati di città per le statistiche
+    const uniqueCitiesMap = new Map();
+    withDist.forEach(item => {
+      const key = `${item.Citta}_${item.Stato}`.toUpperCase();
+      if (!uniqueCitiesMap.has(key)) {
+        uniqueCitiesMap.set(key, item);
+      }
+    });
+    const uniqueCities = Array.from(uniqueCitiesMap.values());
+
     // Punti cardinali estremi
-    const mostNorth = [...withDist].sort((a, b) => b.lat - a.lat)[0];
-    const mostSouth = [...withDist].sort((a, b) => a.lat - b.lat)[0];
-    const mostEast = [...withDist].sort((a, b) => b.lng - a.lng)[0];
-    const mostWest = [...withDist].sort((a, b) => a.lng - b.lng)[0];
+    const mostNorth = [...uniqueCities].sort((a, b) => b.lat - a.lat)[0];
+    const mostSouth = [...uniqueCities].sort((a, b) => a.lat - b.lat)[0];
+    const mostEast = [...uniqueCities].sort((a, b) => b.lng - a.lng)[0];
+    const mostWest = [...uniqueCities].sort((a, b) => a.lng - b.lng)[0];
 
-    // Distanze estreme da Venezia
-    const sortedByVeniceDist = [...withDist].sort((a, b) => a.distFromVenice - b.distFromVenice);
-    const closestToVenice = sortedByVeniceDist[0];
-    const farthestFromVenice = sortedByVeniceDist[sortedByVeniceDist.length - 1];
+    // Distanza massima da Venezia
+    const sortedByVeniceDist = [...uniqueCities].sort((a, b) => b.distFromVenice - a.distFromVenice);
+    const farthestFromVenice = sortedByVeniceDist[0];
 
-    // Più vicine all'Equatore
-    const closestToEquator = [...withDist].sort((a, b) => a.distFromEquator - b.distFromEquator).slice(0, 3);
+    // Più vicine all'Equatore (top 3)
+    const closestToEquator = [...uniqueCities].sort((a, b) => a.distFromEquator - b.distFromEquator).slice(0, 3);
 
-    // Più vicine ai Poli
-    const closestToNorthPole = [...withDist].filter(c => c.lat >= 0).sort((a, b) => b.lat - a.lat)[0];
-    const closestToSouthPole = [...withDist].filter(c => c.lat < 0).sort((a, b) => a.lat - b.lat)[0];
-    
-    const closestToPoles = [];
-    if (closestToNorthPole) closestToPoles.push({ ...closestToNorthPole, pole: "Polo Nord" });
-    if (closestToSouthPole) closestToPoles.push({ ...closestToSouthPole, pole: "Polo Sud" });
-    if (closestToPoles.length === 0 && mostNorth) {
-      closestToPoles.push({ ...mostNorth, pole: "Polo Nord" });
-    }
+    // Prime 3 città più vicine al Polo Nord (latitudine più alta decrescente)
+    const closestToNorthPole = [...uniqueCities].sort((a, b) => b.lat - a.lat).slice(0, 3);
+
+    // Prime 3 città più vicine al Polo Sud (latitudine più bassa crescente)
+    const closestToSouthPole = [...uniqueCities].sort((a, b) => a.lat - b.lat).slice(0, 3);
 
     return {
       isEmpty: false,
@@ -584,10 +926,10 @@ const GeoUtils = {
       mostSouth,
       mostEast,
       mostWest,
-      closestToVenice,
       farthestFromVenice,
       closestToEquator,
-      closestToPoles
+      closestToNorthPole,
+      closestToSouthPole
     };
   },
 
@@ -1105,6 +1447,71 @@ const GeoUtils = {
     }
   },
 
+  // Generatore di rotte marittime realistiche con curvature in mare aperto e passaggi obbligati negli stretti navali
+  generateMaritimeCruiseRoute(ports) {
+    if (!ports || ports.length < 2) return [];
+    const fullPath = [];
+
+    for (let i = 0; i < ports.length - 1; i++) {
+      const pA = ports[i];
+      const pB = ports[i + 1];
+
+      // Riconoscimento passaggi navali obbligati (es. Gibilterra per passaggio Mediterraneo <-> Atlantico/Canarie/Cadice)
+      const isMedToAtl = (pA.lng > -5.3 && pB.lng < -5.5 && pA.lat > 25 && pB.lat > 25);
+      const isAtlToMed = (pB.lng > -5.3 && pA.lng < -5.5 && pB.lat > 25 && pA.lat > 25);
+      
+      let waypoints = [pA, pB];
+      if (isMedToAtl || isAtlToMed) {
+        const gibraltar = { lat: 35.95, lng: -5.60, name: "Stretto di Gibilterra" };
+        waypoints = isMedToAtl ? [pA, gibraltar, pB] : [pA, gibraltar, pB];
+      }
+
+      for (let w = 0; w < waypoints.length - 1; w++) {
+        const wA = waypoints[w];
+        const wB = waypoints[w + 1];
+
+        const dLat = wB.lat - wA.lat;
+        const dLng = wB.lng - wA.lng;
+        const distDeg = Math.sqrt(dLat * dLat + dLng * dLng);
+
+        const midLat = (wA.lat + wB.lat) / 2.0;
+        const midLng = (wA.lng + wB.lng) / 2.0;
+
+        // Vettore normale perpendicolare alla rotta (-dLng, dLat)
+        let normLat = -dLng;
+        let normLng = dLat;
+        const normLen = Math.sqrt(normLat * normLat + normLng * normLng);
+        if (normLen > 0) {
+          normLat /= normLen;
+          normLng /= normLen;
+        }
+
+        // Orientamento verso il mare aperto (nel Mediterraneo ed Europa la terraferma è prevalentemente a nord, il mare a sud)
+        if (normLat > 0 && wA.lat > 35 && wB.lat > 35) {
+          normLat = -normLat;
+          normLng = -normLng;
+        }
+
+        // Calcolo punto di controllo in mare aperto
+        const bendFactor = Math.min(distDeg * 0.22, 1.25);
+        const controlLat = midLat + normLat * bendFactor;
+        const controlLng = midLng + normLng * bendFactor;
+
+        // Campionamento Bézier quadratico fluido
+        const steps = 14;
+        const isLastSegment = (i === ports.length - 2 && w === waypoints.length - 2);
+        for (let s = 0; s < (isLastSegment ? steps + 1 : steps); s++) {
+          const t = s / steps;
+          const lat = (1 - t) * (1 - t) * wA.lat + 2 * (1 - t) * t * controlLat + t * t * wB.lat;
+          const lng = (1 - t) * (1 - t) * wA.lng + 2 * (1 - t) * t * controlLng + t * t * wB.lng;
+          fullPath.push([Number(lat.toFixed(5)), Number(lng.toFixed(5))]);
+        }
+      }
+    }
+
+    return fullPath;
+  },
+
   // 4. MAPPA DINAMICA DI VIAGGIO (CON ROTTE CROCIERA)
   renderTripRouteMap(containerInput, citiesNames = [], isCruise = false) {
     const container = typeof containerInput === "string" ? document.getElementById(containerInput) : containerInput;
@@ -1126,9 +1533,10 @@ const GeoUtils = {
     (citiesNames || []).forEach((cityName, idx) => {
       const clean = String(cityName).trim();
       if (!clean) return;
-      const coords = this.getCityCoordinates(clean);
+      const parsed = this.parseCityAndState(clean);
+      const coords = this.getCityCoordinates(parsed.city, parsed.state);
       if (coords && coords.lat && coords.lng) {
-        points.push({ name: clean, lat: coords.lat, lng: coords.lng, step: idx + 1 });
+        points.push({ name: parsed.city, lat: coords.lat, lng: coords.lng, step: idx + 1 });
       }
     });
 
@@ -1155,15 +1563,23 @@ const GeoUtils = {
       marker.bindPopup(`<strong>Tappa ${p.step}: ${p.name}</strong>${isCruise ? '<br><span style="color: var(--pink);">🚢 Scalo di Rotta Crociera</span>' : ''}`);
     });
 
-    // Se Crociera, disegna linea di rotta tratteggiata Rosa Pastello
-    if (isCruise && latLngs.length > 1) {
-      L.polyline(latLngs, {
+    // Se Crociera, disegna traiettoria marittima curva tratteggiata Rosa Pastello
+    if (isCruise && points.length > 1) {
+      const maritimePath = this.generateMaritimeCruiseRoute(points);
+      L.polyline(maritimePath.length > 0 ? maritimePath : latLngs, {
         color: "#FF80BF",
         weight: 4,
         opacity: 0.95,
         dashArray: "8, 8",
         lineCap: "round",
         lineJoin: "round"
+      }).addTo(map);
+    } else if (latLngs.length > 1) {
+      L.polyline(latLngs, {
+        color: "#00FFA3",
+        weight: 3,
+        opacity: 0.85,
+        dashArray: "6, 6"
       }).addTo(map);
     }
 

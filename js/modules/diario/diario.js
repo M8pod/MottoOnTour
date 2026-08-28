@@ -64,13 +64,19 @@ const DiarioModule = {
                     const dStart = CONFIG.formatDateDisplay(t.Data_Inizio_Globale);
                     const dEnd = CONFIG.formatDateDisplay(t.Data_Fine_Globale);
                     const dateText = dStart && dEnd ? `Dal ${dStart} al ${dEnd}` : (dStart ? `Data ${dStart}` : (t.Anno_Viaggio ? `Anno ${t.Anno_Viaggio}` : ''));
+                    const badgeHtml = GeoUtils.getIntensityBadgeHtml(t);
                     return `
-                      <button type="button" class="card card-mint card-interactive card-btn" onclick="DiarioModule.openTripDetails('${t.ID_Viaggio}', 'diario')" aria-label="Scheda viaggio: ${t.Nome_Viaggio}. ${dateText}. ${t.Stati ? `Stati: ${t.Stati.replace(/\n/g, ', ')}.` : ''} Apri dettagli viaggio.">
-                        <h3 style="color: var(--mint); margin: 0;">${t.Nome_Viaggio}</h3>
-                        <p style="color: #ccc; font-size: 0.9rem; margin-top: 4px;">
-                          📅 ${dStart && dEnd ? `${dStart} -> ${dEnd}` : (t.Anno_Viaggio || dStart || '')}
-                          ${t.Stati ? ` | 📍 ${t.Stati.replace(/\n/g, ', ')}` : ''}
-                        </p>
+                      <button type="button" class="card card-mint card-interactive card-btn" onclick="DiarioModule.openTripDetails('${t.ID_Viaggio}', 'diario')" aria-label="Scheda viaggio: ${t.Nome_Viaggio}. ${dateText}. ${t.intensity ? t.intensity.ariaLabel : ''}. ${t.Stati ? `Stati: ${t.Stati.replace(/\n/g, ', ')}.` : ''} Tocca due volte per aprire i dettagli del viaggio.">
+                        <div aria-hidden="true">
+                          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+                            <h3 style="color: var(--mint); margin: 0;">${t.Nome_Viaggio}</h3>
+                            ${badgeHtml}
+                          </div>
+                          <p style="color: #ccc; font-size: 0.9rem; margin-top: 4px;">
+                            📅 ${dStart && dEnd ? `${dStart} -> ${dEnd}` : (t.Anno_Viaggio || dStart || '')}
+                            ${t.Stati ? ` | 📍 ${t.Stati.replace(/\n/g, ', ')}` : ''}
+                          </p>
+                        </div>
                       </button>
                     `;
                   }).join('')}
@@ -159,17 +165,23 @@ const DiarioModule = {
             const dStart = CONFIG.formatDateDisplay(t.Data_Inizio_Globale);
             const dEnd = CONFIG.formatDateDisplay(t.Data_Fine_Globale);
             const dateText = dStart && dEnd ? `Dal ${dStart} al ${dEnd}` : (dStart ? `Data ${dStart}` : (t.Anno_Viaggio || '-'));
+            const badgeHtml = GeoUtils.getIntensityBadgeHtml(t);
             return `
-              <button type="button" class="card card-mint card-interactive card-btn" onclick="DiarioModule.openTripDetails('${t.ID_Viaggio}', 'diario')" aria-label="Scheda viaggio: ${t.Nome_Viaggio}. ${dateText}. ${totalBudget > 0 ? `Spesa: ${totalBudget} Euro.` : ''} Apri dettagli viaggio.">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
-                  <h2 style="color: var(--mint); margin: 0; border: none;">${t.Nome_Viaggio}</h2>
-                  ${totalBudget > 0 ? `<span class="stat-value" style="font-size: 1rem;">€ ${totalBudget.toLocaleString('it-IT')}</span>` : ''}
+              <button type="button" class="card card-mint card-interactive card-btn" onclick="DiarioModule.openTripDetails('${t.ID_Viaggio}', 'diario')" aria-label="Scheda viaggio: ${t.Nome_Viaggio}. ${dateText}. ${t.intensity ? t.intensity.ariaLabel : ''}. ${totalBudget > 0 ? `Spesa: ${totalBudget} Euro.` : ''} Tocca due volte per aprire i dettagli del viaggio.">
+                <div aria-hidden="true">
+                  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+                    <h2 style="color: var(--mint); margin: 0; border: none;">${t.Nome_Viaggio}</h2>
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                      ${badgeHtml}
+                      ${totalBudget > 0 ? `<span class="stat-value" style="font-size: 0.95rem;">€ ${totalBudget.toLocaleString('it-IT')}</span>` : ''}
+                    </div>
+                  </div>
+                  <p style="color: #ccc; margin-top: 6px;">
+                    📅 ${dStart && dEnd ? `Dal ${dStart} al ${dEnd}` : (t.Anno_Viaggio || dStart || '-')}
+                    ${t.Stati ? ` | 📍 ${t.Stati.replace(/\n/g, ', ')}` : ''}
+                    ${t.Compagni_Viaggio ? ` | 👥 ${t.Compagni_Viaggio.replace(/\n/g, ', ')}` : ''}
+                  </p>
                 </div>
-                <p style="color: #ccc; margin-top: 6px;">
-                  📅 ${dStart && dEnd ? `Dal ${dStart} al ${dEnd}` : (t.Anno_Viaggio || dStart || '-')}
-                  ${t.Stati ? ` | 📍 ${t.Stati.replace(/\n/g, ', ')}` : ''}
-                  ${t.Compagni_Viaggio ? ` | 👥 ${t.Compagni_Viaggio.replace(/\n/g, ', ')}` : ''}
-                </p>
               </button>
             `;
           }).join('')}
@@ -210,6 +222,7 @@ const DiarioModule = {
     const dStart = CONFIG.formatDateDisplay(trip.Data_Inizio_Globale);
     const dEnd = CONFIG.formatDateDisplay(trip.Data_Fine_Globale);
     const datesHeading = dStart && dEnd ? `DAL ${dStart} AL ${dEnd}` : (dStart ? `DATA ${dStart}` : (trip.Anno_Viaggio ? `ANNO ${trip.Anno_Viaggio}` : ''));
+    const badgeLarge = GeoUtils.getIntensityBadgeHtml(trip, true);
 
     const backButtonHtml = this.previousModule === 'passaporto'
       ? `<button class="btn btn-sm btn-pink" onclick="PassaportoModule.openCategory('geografia'); App.navigate('passaporto');">⬅️ TORNA A GEOGRAFIA</button>`
@@ -231,10 +244,15 @@ const DiarioModule = {
         </button>
       </div>
 
-      <h1 id="screen-title" tabindex="-1" style="margin-bottom: 6px;">${trip.Nome_Viaggio}</h1>
-      <p style="color: var(--pink-light); font-weight: 700; margin-bottom: 16px;">
+      <h1 id="screen-title" tabindex="-1" style="margin-bottom: 4px;">${trip.Nome_Viaggio}</h1>
+      <p style="color: var(--pink-light); font-weight: 700; margin-bottom: 8px;">
         ${datesHeading}
       </p>
+
+      <!-- BOLLINO INTENSITÀ VIAGGIO (SCALA 1-10) -->
+      <div style="margin-bottom: 16px;">
+        ${badgeLarge}
+      </div>
 
       <!-- MAPPA DINAMICA DEL VIAGGIO -->
       <section class="card">
@@ -426,11 +444,11 @@ const DiarioModule = {
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
             <div class="form-group">
               <label class="form-label" for="dia-data-inizio">DATA INIZIO</label>
-              <input type="date" id="dia-data-inizio" class="form-control" value="${trip.Data_Inizio_Globale || ''}" ${trip.Data_Fine_Globale ? `max="${trip.Data_Fine_Globale}"` : ''} onchange="DiarioModule.handleDateChange()" oninput="DiarioModule.handleDateChange()">
+              <input type="date" id="dia-data-inizio" class="form-control" value="${trip.Data_Inizio_Globale || ''}" ${trip.Data_Fine_Globale ? `max="${trip.Data_Fine_Globale}"` : ''} onchange="DiarioModule.handleDateChange()" aria-label="Data inizio viaggio">
             </div>
             <div class="form-group">
               <label class="form-label" for="dia-data-fine">DATA RITORNO</label>
-              <input type="date" id="dia-data-fine" class="form-control" value="${trip.Data_Fine_Globale || ''}" ${trip.Data_Inizio_Globale ? `min="${trip.Data_Inizio_Globale}"` : ''} onchange="DiarioModule.handleDateChange()" oninput="DiarioModule.handleDateChange()">
+              <input type="date" id="dia-data-fine" class="form-control" value="${trip.Data_Fine_Globale || ''}" ${trip.Data_Inizio_Globale ? `min="${trip.Data_Inizio_Globale}"` : ''} onchange="DiarioModule.handleDateChange()" aria-label="Data ritorno viaggio">
             </div>
           </div>
 
@@ -441,7 +459,10 @@ const DiarioModule = {
 
           <div class="form-group">
             <label class="form-label" for="dia-citta">CITTÀ / TAPPE (UNA PER RIGA)</label>
-            <textarea id="dia-citta" class="form-control" placeholder="es. Oslo&#10;Bergen&#10;Copenaghen">${trip.Citta || ''}</textarea>
+            <p style="color: var(--pink-light); font-size: 0.85rem; margin-top: 2px; margin-bottom: 6px;">
+              💡 <em>Per crociere o tour multi-stato, puoi specificare lo stato a fianco tra parentesi (es. Savona, Marsiglia, Cadice (Spagna), Las Palmas (Spagna)).</em>
+            </p>
+            <textarea id="dia-citta" class="form-control" placeholder="es. Savona&#10;Marsiglia&#10;Barcellona&#10;Cadice (Spagna)&#10;Las Palmas (Spagna)">${trip.Citta || ''}</textarea>
           </div>
 
           <div class="form-group">
@@ -459,12 +480,12 @@ const DiarioModule = {
             <div class="checkbox-group">
               ${CONFIG.TRANSPORT_OPTIONS.map(opt => `
                 <label class="checkbox-item">
-                  <input type="checkbox" name="dia-mezzi" value="${opt}" ${(trip.Mezzi_Usati || '').includes(opt) ? 'checked' : ''} onchange="DiarioModule.toggleMezziAltro()">
+                  <input type="checkbox" name="dia-mezzi" value="${opt}" ${(trip.Mezzi_Usati || '').includes(opt) ? 'checked' : ''} onchange="DiarioModule.toggleMezzoAltro()">
                   <span class="checkbox-label">${opt}</span>
                 </label>
               `).join('')}
             </div>
-            <input type="text" id="dia-mezzi-altro" class="form-control" style="margin-top: 8px; display: ${(trip.Mezzi_Usati || '').includes('Nave') || (trip.Mezzi_Usati || '').includes('Altro') ? 'block' : 'none'};" value="${trip.Specifiche_Mezzo_Altro || ''}" placeholder="es. MSC World Europa o Noleggio auto">
+            <input type="text" id="dia-mezzo-altro" class="form-control" style="margin-top: 8px; display: ${(trip.Mezzi_Usati || '').includes('Altro') ? 'block' : 'none'};" value="${trip.Specifiche_Mezzo_Altro || ''}" placeholder="es. Trattore o Mezzo insolito">
           </div>
 
           <div class="form-group">
@@ -474,7 +495,7 @@ const DiarioModule = {
 
           <div class="form-group">
             <label class="form-label" for="dia-tipo">TIPOLOGIA VIAGGIO</label>
-            <select id="dia-tipo" class="form-control">
+            <select id="dia-tipo" class="form-control" aria-label="Tipologia viaggio">
               ${CONFIG.TRIP_TYPES.map(t => `<option value="${t}" ${trip.Tipologia_Viaggio === t ? 'selected' : ''}>${t}</option>`).join('')}
             </select>
           </div>
