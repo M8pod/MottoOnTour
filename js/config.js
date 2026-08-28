@@ -4,9 +4,15 @@
 
 const CONFIG = {
   APP_NAME: "MOTTO ON TOUR",
-  VERSION: "1.5",
+  VERSION: "1.6",
   SECRET_PIN: "211221",
   API_URL: "https://script.google.com/macros/s/AKfycbxAVehkLAP3p2O0HQIhOnoC5XnhcrWE1G5Yxltwq1ozwzqiUcsiHwlq0FRcD9TPqQJD/exec",
+
+  // Formatta valori monetari in Euro (es. € 1.250)
+  formatCurrency(val) {
+    const num = Number(val) || 0;
+    return `€ ${num.toLocaleString('it-IT')}`;
+  },
   
   // Tavolozza ufficiale a 8 colori per grafici a torta (in ordine dal valore più alto al più basso)
   CHART_PALETTE: [

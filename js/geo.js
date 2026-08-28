@@ -698,6 +698,13 @@ const GeoUtils = {
     `;
   },
 
+  // Ottiene l'etichetta descrittiva del Bollino per lettori di schermo (VoiceOver)
+  getIntensityAriaLabel(trip) {
+    if (!trip) return "";
+    const info = trip.intensity || this.calculateTripIntensityScore(trip);
+    return (info && info.ariaLabel) ? info.ariaLabel : "";
+  },
+
   deg2rad(deg) {
     return deg * (Math.PI / 180);
   },
@@ -1447,7 +1454,397 @@ const GeoUtils = {
     }
   },
 
-  // Generatore di rotte marittime realistiche con curvature in mare aperto e passaggi obbligati negli stretti navali
+  // ==========================================================================
+  // RETE NAUTICA E MOTORE DI ROTTE MARITTIME PER CROCIERE (100% IN MARE APERTO)
+  // Gestisce passaggi obbligati negli stretti (Gibilterra, Messina, Bonifacio, Otranto, Matapan, Dardanelli)
+  // ==========================================================================
+
+  NAUTICAL_NODES: {
+    // --- ADRIATICO ---
+    "ADR_NORTH": [45.15, 12.85],       // Alto Adriatico / Venezia / Chioggia / Trieste
+    "ADR_MID_NORTH": [44.20, 13.60],   // Ancona / Zara
+    "ADR_MID_SOUTH": [42.80, 15.20],   // Pescara / Spalato
+    "ADR_SOUTH": [41.40, 17.20],       // Bari / Dubrovnik / Kotor
+    "STRAIT_OTRANTO": [39.85, 18.85],  // Canale d'Otranto (uscita Adriatico)
+
+    // --- IONIO E GRECIA OCCIDENTALE ---
+    "IONIAN_NORTH": [39.50, 19.50],    // Corfù / Igoumenitsa
+    "IONIAN_MID": [38.30, 18.00],      // Crotone / Santa Maria di Leuca
+    "IONIAN_SOUTH": [36.80, 17.50],    // Ionio meridionale / Golfo di Taranto al largo
+    "PELOPONNESE_WEST": [37.50, 21.10],// Katakolo / Olimpia / Zante
+
+    // --- STRETTO DI MESSINA & SICILIA ---
+    "STRAIT_MESSINA_N": [38.30, 15.65],// Stretto di Messina Nord
+    "STRAIT_MESSINA_S": [38.10, 15.58],// Stretto di Messina Sud
+    "SICILY_SOUTH": [36.40, 14.80],    // Canale di Malta / Sud Sicilia
+    "SICILY_WEST": [37.80, 11.80],     // Canale di Sicilia / Egadi / Trapani
+
+    // --- TIRRENO & CORSICA/SARDEGNA ---
+    "TYR_SOUTH": [39.20, 14.50],       // Tirreno Sud / Palermo / Eolie
+    "TYR_NAPLES": [40.60, 14.00],      // Golfo di Napoli / Salerno / Capri / Amalfi
+    "TYR_CENTRAL": [41.50, 11.80],     // Civitavecchia / Roma
+    "TYR_NORTH": [42.60, 10.30],       // Canale di Piombino / Isola d'Elba / Livorno
+    "STRAIT_BONIFACIO": [41.30, 9.25], // Bocche di Bonifacio (tra Corsica e Sardegna)
+
+    // --- MAR LIGURE & GOLFO DEL LEONE ---
+    "LIGURIAN_EAST": [43.80, 9.20],    // Genova / La Spezia / Portofino
+    "LIGURIAN_WEST": [43.40, 7.80],    // Savona / Monaco / Nizza / Cannes
+    "GULF_LION": [42.80, 5.20],        // Marsiglia / Tolone
+
+    // --- BALEARI & SPAGNA ---
+    "BALEARIC_NORTH": [41.20, 2.50],   // Barcellona / Costa Brava
+    "BALEARIC_CENTRAL": [39.80, 3.20], // Palma di Maiorca / Minorca
+    "BALEARIC_SOUTH": [38.80, 1.60],   // Ibiza / Formentera / Valencia
+    "ALBORAN_EAST": [37.20, -0.50],    // Alicante / Cartagena
+    "ALBORAN_MID": [36.40, -3.20],     // Malaga / Motril
+    "STRAIT_GIBRALTAR": [35.95, -5.60],// Stretto di Gibilterra (passaggio Med <-> Atlantico)
+
+    // --- ATLANTICO & PORTOGALLO ---
+    "CADIZ_GULF": [36.40, -6.80],      // Golfo di Cadice
+    "CAPE_ST_VINCENT": [36.85, -9.15], // Cabo de São Vicente (Sud Portogallo)
+    "LISBON_COAST": [38.65, -9.50],    // Lisbona / Cascais
+    "PORTO_COAST": [41.15, -8.90],     // Porto / Vigo / Galizia
+
+    // --- CANARIE & MADEIRA ---
+    "CANARIES_PASS_N": [32.50, -12.50],  // Rotta Atlantica Canarie Nord
+    "CANARIES_PASS_MID": [29.50, -14.50],// Lanzarote / Fuerteventura al largo
+    "CANARIES_TENERIFE": [28.40, -16.10],// Santa Cruz de Tenerife / Las Palmas
+    "MADEIRA_PASS": [32.60, -16.80],     // Funchal / Madeira
+
+    // --- MAR EGEO & GRECIA ORIENTALE ---
+    "CAPE_MATAPAN": [36.30, 22.45],    // Capo Matapan (Sud Peloponneso)
+    "AEGEAN_CENTRAL": [37.20, 24.50],  // Cicladi / Mykonos / Santorini
+    "AEGEAN_NORTH": [38.20, 23.80],    // Golfo Saronico / Pireo / Atene
+    "AEGEAN_EAST": [37.00, 27.00],     // Costa Turca / Kusadasi / Rodi
+    "CRETE_NORTH": [35.50, 25.00],     // Heraklion / Creta
+
+    // --- MARMARA & BOSFORO ---
+    "STRAIT_DARDANELLES": [40.05, 26.20], // Stretto dei Dardanelli
+    "SEA_MARMARA": [40.75, 27.90],        // Mar di Marmara
+    "STRAIT_BOSPHORUS": [41.05, 29.02],   // Bosforo / Istanbul
+
+    // --- NORD EUROPA, MANICA & FIORDI NORVEGESI ---
+    "ENGLISH_CHANNEL_W": [49.80, -4.50],  // Canale della Manica Ovest / Southampton
+    "STRAIT_DOVER": [51.15, 1.60],        // Stretto di Dover / Londra
+    "NORTH_SEA_MID": [54.50, 5.00],       // Mare del Nord / Amsterdam / Amburgo
+    "SKAGERRAK": [57.80, 8.50],           // Skagerrak / Oslo
+    "KATTEGAT": [56.50, 11.50],           // Kattegat / Copenaghen
+    "BALTIC_SEA": [57.50, 18.50],         // Mar Baltico / Stoccolma / Helsinki
+    "NORWAY_COAST_S": [58.80, 5.20],      // Stavanger
+    "NORWAY_COAST_M": [60.50, 4.80],      // Bergen / Sognefjord
+    "NORWAY_COAST_N": [62.80, 5.80],      // Alesund / Geiranger
+    "NORWAY_COAST_ARCTIC": [69.60, 18.00] // Tromsø / Capo Nord
+  },
+
+  NAUTICAL_EDGES: [
+    // Adriatico
+    ["ADR_NORTH", "ADR_MID_NORTH"],
+    ["ADR_MID_NORTH", "ADR_MID_SOUTH"],
+    ["ADR_MID_SOUTH", "ADR_SOUTH"],
+    ["ADR_SOUTH", "STRAIT_OTRANTO"],
+
+    // Ionio
+    ["STRAIT_OTRANTO", "IONIAN_NORTH"],
+    ["STRAIT_OTRANTO", "IONIAN_MID"],
+    ["IONIAN_NORTH", "IONIAN_MID"],
+    ["IONIAN_MID", "IONIAN_SOUTH"],
+    ["IONIAN_MID", "STRAIT_MESSINA_S"],
+    ["IONIAN_MID", "PELOPONNESE_WEST"],
+    ["IONIAN_SOUTH", "SICILY_SOUTH"],
+    ["IONIAN_SOUTH", "CAPE_MATAPAN"],
+
+    // Stretto di Messina & Sicilia
+    ["STRAIT_MESSINA_S", "STRAIT_MESSINA_N"],
+    ["STRAIT_MESSINA_N", "TYR_SOUTH"],
+    ["SICILY_SOUTH", "STRAIT_MESSINA_S"],
+    ["SICILY_SOUTH", "SICILY_WEST"],
+    ["SICILY_WEST", "TYR_SOUTH"],
+    ["SICILY_WEST", "BALEARIC_SOUTH"],
+
+    // Tirreno
+    ["TYR_SOUTH", "TYR_NAPLES"],
+    ["TYR_SOUTH", "TYR_CENTRAL"],
+    ["TYR_NAPLES", "TYR_CENTRAL"],
+    ["TYR_CENTRAL", "TYR_NORTH"],
+    ["TYR_CENTRAL", "STRAIT_BONIFACIO"],
+    ["TYR_CENTRAL", "BALEARIC_CENTRAL"],
+    ["TYR_NORTH", "LIGURIAN_EAST"],
+    ["TYR_NORTH", "LIGURIAN_WEST"],
+
+    // Bocche di Bonifacio & Ligure & Golfo del Leone
+    ["STRAIT_BONIFACIO", "BALEARIC_CENTRAL"],
+    ["STRAIT_BONIFACIO", "GULF_LION"],
+    ["LIGURIAN_EAST", "LIGURIAN_WEST"],
+    ["LIGURIAN_WEST", "GULF_LION"],
+    ["GULF_LION", "BALEARIC_NORTH"],
+    ["GULF_LION", "BALEARIC_CENTRAL"],
+
+    // Baleari & Spagna & Alboran
+    ["BALEARIC_NORTH", "BALEARIC_CENTRAL"],
+    ["BALEARIC_CENTRAL", "BALEARIC_SOUTH"],
+    ["BALEARIC_SOUTH", "ALBORAN_EAST"],
+    ["BALEARIC_NORTH", "ALBORAN_EAST"],
+    ["ALBORAN_EAST", "ALBORAN_MID"],
+    ["ALBORAN_MID", "STRAIT_GIBRALTAR"],
+
+    // Atlantico & Cadice & Canarie & Portogallo
+    ["STRAIT_GIBRALTAR", "CADIZ_GULF"],
+    ["CADIZ_GULF", "CAPE_ST_VINCENT"],
+    ["CADIZ_GULF", "CANARIES_PASS_N"],
+    ["CAPE_ST_VINCENT", "LISBON_COAST"],
+    ["CAPE_ST_VINCENT", "CANARIES_PASS_N"],
+    ["LISBON_COAST", "PORTO_COAST"],
+    ["LISBON_COAST", "CANARIES_PASS_N"],
+    ["PORTO_COAST", "ENGLISH_CHANNEL_W"],
+    ["CANARIES_PASS_N", "CANARIES_PASS_MID"],
+    ["CANARIES_PASS_N", "MADEIRA_PASS"],
+    ["CANARIES_PASS_MID", "CANARIES_TENERIFE"],
+    ["CANARIES_TENERIFE", "MADEIRA_PASS"],
+
+    // Grecia & Egeo & Creta
+    ["PELOPONNESE_WEST", "CAPE_MATAPAN"],
+    ["CAPE_MATAPAN", "AEGEAN_CENTRAL"],
+    ["CAPE_MATAPAN", "AEGEAN_NORTH"],
+    ["CAPE_MATAPAN", "CRETE_NORTH"],
+    ["AEGEAN_NORTH", "AEGEAN_CENTRAL"],
+    ["AEGEAN_CENTRAL", "AEGEAN_EAST"],
+    ["AEGEAN_CENTRAL", "CRETE_NORTH"],
+    ["AEGEAN_NORTH", "STRAIT_DARDANELLES"],
+
+    // Marmara & Bosforo (Istanbul)
+    ["STRAIT_DARDANELLES", "SEA_MARMARA"],
+    ["SEA_MARMARA", "STRAIT_BOSPHORUS"],
+
+    // Nord Europa, Mare del Nord & Baltico
+    ["ENGLISH_CHANNEL_W", "STRAIT_DOVER"],
+    ["STRAIT_DOVER", "NORTH_SEA_MID"],
+    ["NORTH_SEA_MID", "SKAGERRAK"],
+    ["NORTH_SEA_MID", "NORWAY_COAST_S"],
+    ["SKAGERRAK", "KATTEGAT"],
+    ["KATTEGAT", "BALTIC_SEA"],
+
+    // Fiordi Norvegesi
+    ["NORWAY_COAST_S", "NORWAY_COAST_M"],
+    ["NORWAY_COAST_M", "NORWAY_COAST_N"],
+    ["NORWAY_COAST_N", "NORWAY_COAST_ARCTIC"]
+  ],
+
+  NAUTICAL_PORT_MAPPING: {
+    "VENEZIA": "ADR_NORTH",
+    "TRIESTE": "ADR_NORTH",
+    "RAVENNA": "ADR_NORTH",
+    "CHIOGGIA": "ADR_NORTH",
+    "CAORLE": "ADR_NORTH",
+    "JESOLO": "ADR_NORTH",
+    "LIDO DI JESOLO": "ADR_NORTH",
+    "ANCONA": "ADR_MID_NORTH",
+    "PESCARA": "ADR_MID_SOUTH",
+    "SPALATO": "ADR_MID_SOUTH",
+    "SPLIT": "ADR_MID_SOUTH",
+    "ZARA": "ADR_MID_NORTH",
+    "ZADAR": "ADR_MID_NORTH",
+    "DUBROVNIK": "ADR_SOUTH",
+    "KOTOR": "ADR_SOUTH",
+    "CATTARO": "ADR_SOUTH",
+    "BARI": "ADR_SOUTH",
+    "BRINDISI": "ADR_SOUTH",
+    "CORFU": "IONIAN_NORTH",
+    "ZACINTO": "IONIAN_MID",
+    "ZANTE": "IONIAN_MID",
+    "PATRASSO": "PELOPONNESE_WEST",
+    "KATAKOLO": "PELOPONNESE_WEST",
+    "ATENE": "AEGEAN_NORTH",
+    "PIREO": "AEGEAN_NORTH",
+    "MYKONOS": "AEGEAN_CENTRAL",
+    "SANTORINI": "AEGEAN_CENTRAL",
+    "RODI": "AEGEAN_EAST",
+    "CRETA": "CRETE_NORTH",
+    "HERAKLION": "CRETE_NORTH",
+    "KUSADASI": "AEGEAN_EAST",
+    "ISTANBUL": "STRAIT_BOSPHORUS",
+    "MESSINA": "STRAIT_MESSINA_N",
+    "REGGIO CALABRIA": "STRAIT_MESSINA_S",
+    "CATANIA": "IONIAN_MID",
+    "SIRACUSA": "IONIAN_SOUTH",
+    "PALERMO": "TYR_SOUTH",
+    "CAGLIARI": "STRAIT_BONIFACIO",
+    "OLBIA": "TYR_CENTRAL",
+    "NAPOLI": "TYR_NAPLES",
+    "SALERNO": "TYR_NAPLES",
+    "SORRENTO": "TYR_NAPLES",
+    "CAPRI": "TYR_NAPLES",
+    "ISCHIA": "TYR_NAPLES",
+    "AMALFI": "TYR_NAPLES",
+    "POSITANO": "TYR_NAPLES",
+    "CIVITAVECCHIA": "TYR_CENTRAL",
+    "ROMA": "TYR_CENTRAL",
+    "LIVORNO": "TYR_NORTH",
+    "LA SPEZIA": "LIGURIAN_EAST",
+    "GENOVA": "LIGURIAN_EAST",
+    "SAVONA": "LIGURIAN_WEST",
+    "MONACO": "LIGURIAN_WEST",
+    "MONTE CARLO": "LIGURIAN_WEST",
+    "NIZZA": "LIGURIAN_WEST",
+    "CANNES": "LIGURIAN_WEST",
+    "MARSIGLIA": "GULF_LION",
+    "TOLONE": "GULF_LION",
+    "BARCELLONA": "BALEARIC_NORTH",
+    "PALMA DI MAIORCA": "BALEARIC_CENTRAL",
+    "PALMA": "BALEARIC_CENTRAL",
+    "IBIZA": "BALEARIC_SOUTH",
+    "VALENCIA": "BALEARIC_SOUTH",
+    "ALICANTE": "ALBORAN_EAST",
+    "CARTAGENA": "ALBORAN_EAST",
+    "MALAGA": "ALBORAN_MID",
+    "GIBILTERRA": "STRAIT_GIBRALTAR",
+    "GIBRALTAR": "STRAIT_GIBRALTAR",
+    "CADICE": "CADIZ_GULF",
+    "CADIZ": "CADIZ_GULF",
+    "LISBONA": "LISBON_COAST",
+    "PORTO": "PORTO_COAST",
+    "SANTA CRUZ DE TENERIFE": "CANARIES_TENERIFE",
+    "TENERIFE": "CANARIES_TENERIFE",
+    "LAS PALMAS": "CANARIES_TENERIFE",
+    "LAS PALMAS DE GRAN CANARIA": "CANARIES_TENERIFE",
+    "ARRECIFE": "CANARIES_PASS_MID",
+    "PUERTO DEL ROSARIO": "CANARIES_PASS_MID",
+    "FUNCHAL": "MADEIRA_PASS",
+    "LONDRA": "STRAIT_DOVER",
+    "SOUTHAMPTON": "ENGLISH_CHANNEL_W",
+    "AMSTERDAM": "NORTH_SEA_MID",
+    "ROTTERDAM": "NORTH_SEA_MID",
+    "AMBURGO": "NORTH_SEA_MID",
+    "COPENAGHEN": "KATTEGAT",
+    "OSLO": "SKAGERRAK",
+    "STOCCOLMA": "BALTIC_SEA",
+    "HELSINKI": "BALTIC_SEA",
+    "BERGEN": "NORWAY_COAST_M",
+    "STAVANGER": "NORWAY_COAST_S",
+    "ALESUND": "NORWAY_COAST_N",
+    "GEIRANGER": "NORWAY_COAST_N",
+    "FLAM": "NORWAY_COAST_M",
+    "TROMSO": "NORWAY_COAST_ARCTIC"
+  },
+
+  findNearestNauticalNode(lat, lng) {
+    let best = null;
+    let minD = Infinity;
+    for (const [key, coords] of Object.entries(this.NAUTICAL_NODES)) {
+      const d = this.calculateDistance(lat, lng, coords[0], coords[1]);
+      if (d !== null && d < minD) {
+        minD = d;
+        best = key;
+      }
+    }
+    return best;
+  },
+
+  findNauticalPath(startNode, endNode) {
+    if (!startNode || !endNode) return [];
+    if (startNode === endNode) return [startNode];
+
+    const distances = {};
+    const previous = {};
+    const unvisited = {};
+
+    for (const k in this.NAUTICAL_NODES) {
+      distances[k] = Infinity;
+      unvisited[k] = true;
+    }
+    distances[startNode] = 0;
+
+    const adj = {};
+    this.NAUTICAL_EDGES.forEach(([u, v]) => {
+      if (!adj[u]) adj[u] = [];
+      if (!adj[v]) adj[v] = [];
+      const coordU = this.NAUTICAL_NODES[u];
+      const coordV = this.NAUTICAL_NODES[v];
+      const w = this.calculateDistance(coordU[0], coordU[1], coordV[0], coordV[1]) || 100;
+      adj[u].push({ node: v, weight: w });
+      adj[v].push({ node: u, weight: w });
+    });
+
+    while (Object.keys(unvisited).length > 0) {
+      let current = null;
+      let lowestDist = Infinity;
+      for (const node in unvisited) {
+        if (distances[node] < lowestDist) {
+          lowestDist = distances[node];
+          current = node;
+        }
+      }
+
+      if (!current || distances[current] === Infinity) break;
+      if (current === endNode) break;
+
+      delete unvisited[current];
+
+      const neighbors = adj[current] || [];
+      for (let j = 0; j < neighbors.length; j++) {
+        const nbr = neighbors[j];
+        if (unvisited[nbr.node]) {
+          const alt = distances[current] + nbr.weight;
+          if (alt < distances[nbr.node]) {
+            distances[nbr.node] = alt;
+            previous[nbr.node] = current;
+          }
+        }
+      }
+    }
+
+    const path = [];
+    let curr = endNode;
+    while (curr) {
+      path.unshift(curr);
+      curr = previous[curr];
+    }
+    return path.length > 1 && path[0] === startNode ? path : [];
+  },
+
+  // Interpolazione curvilinea spline Catmull-Rom fluida attraverso i nodi marittimi
+  smoothNauticalWaypoints(points, tension = 0.35) {
+    if (!points || points.length < 2) return points || [];
+    if (points.length === 2) {
+      const seg = [];
+      const steps = 8;
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps;
+        seg.push([
+          Number((points[0][0] + (points[1][0] - points[0][0]) * t).toFixed(5)),
+          Number((points[0][1] + (points[1][1] - points[0][1]) * t).toFixed(5))
+        ]);
+      }
+      return seg;
+    }
+
+    const result = [];
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = i > 0 ? points[i - 1] : points[i];
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const p3 = i < points.length - 2 ? points[i + 2] : p2;
+
+      const numSegments = 10;
+      for (let j = 0; j < (i === points.length - 2 ? numSegments + 1 : numSegments); j++) {
+        const t = j / numSegments;
+        const t2 = t * t;
+        const t3 = t2 * t;
+
+        const c0 = -tension * t3 + 2 * tension * t2 - tension * t;
+        const c1 = (2 - tension) * t3 + (tension - 3) * t2 + 1;
+        const c2 = (tension - 2) * t3 + (3 - 2 * tension) * t2 + tension * t;
+        const c3 = tension * t3 - tension * t2;
+
+        const lat = c0 * p0[0] + c1 * p1[0] + c2 * p2[0] + c3 * p3[0];
+        const lng = c0 * p0[1] + c1 * p1[1] + c2 * p2[1] + c3 * p3[1];
+
+        result.push([Number(lat.toFixed(5)), Number(lng.toFixed(5))]);
+      }
+    }
+    return result;
+  },
+
+  // Generatore di rotte marittime realistiche con navigazione nei corridoi d'acqua aperti
   generateMaritimeCruiseRoute(ports) {
     if (!ports || ports.length < 2) return [];
     const fullPath = [];
@@ -1456,55 +1853,37 @@ const GeoUtils = {
       const pA = ports[i];
       const pB = ports[i + 1];
 
-      // Riconoscimento passaggi navali obbligati (es. Gibilterra per passaggio Mediterraneo <-> Atlantico/Canarie/Cadice)
-      const isMedToAtl = (pA.lng > -5.3 && pB.lng < -5.5 && pA.lat > 25 && pB.lat > 25);
-      const isAtlToMed = (pB.lng > -5.3 && pA.lng < -5.5 && pB.lat > 25 && pA.lat > 25);
-      
-      let waypoints = [pA, pB];
-      if (isMedToAtl || isAtlToMed) {
-        const gibraltar = { lat: 35.95, lng: -5.60, name: "Stretto di Gibilterra" };
-        waypoints = isMedToAtl ? [pA, gibraltar, pB] : [pA, gibraltar, pB];
+      const nameA = this.normalizeName(pA.name || "");
+      const nameB = this.normalizeName(pB.name || "");
+
+      const nodeA = this.NAUTICAL_PORT_MAPPING[nameA] || this.findNearestNauticalNode(pA.lat, pA.lng);
+      const nodeB = this.NAUTICAL_PORT_MAPPING[nameB] || this.findNearestNauticalNode(pB.lat, pB.lng);
+
+      const segmentWaypoints = [[pA.lat, pA.lng]];
+
+      if (nodeA && nodeB && nodeA !== nodeB) {
+        const pathNodes = this.findNauticalPath(nodeA, nodeB);
+        if (pathNodes.length > 0) {
+          for (let k = 0; k < pathNodes.length; k++) {
+            const nCoord = this.NAUTICAL_NODES[pathNodes[k]];
+            segmentWaypoints.push(nCoord);
+          }
+        } else if (this.NAUTICAL_NODES[nodeA] && this.NAUTICAL_NODES[nodeB]) {
+          segmentWaypoints.push(this.NAUTICAL_NODES[nodeA]);
+          segmentWaypoints.push(this.NAUTICAL_NODES[nodeB]);
+        }
+      } else if (nodeA && this.NAUTICAL_NODES[nodeA]) {
+        segmentWaypoints.push(this.NAUTICAL_NODES[nodeA]);
       }
 
-      for (let w = 0; w < waypoints.length - 1; w++) {
-        const wA = waypoints[w];
-        const wB = waypoints[w + 1];
+      segmentWaypoints.push([pB.lat, pB.lng]);
 
-        const dLat = wB.lat - wA.lat;
-        const dLng = wB.lng - wA.lng;
-        const distDeg = Math.sqrt(dLat * dLat + dLng * dLng);
-
-        const midLat = (wA.lat + wB.lat) / 2.0;
-        const midLng = (wA.lng + wB.lng) / 2.0;
-
-        // Vettore normale perpendicolare alla rotta (-dLng, dLat)
-        let normLat = -dLng;
-        let normLng = dLat;
-        const normLen = Math.sqrt(normLat * normLat + normLng * normLng);
-        if (normLen > 0) {
-          normLat /= normLen;
-          normLng /= normLen;
-        }
-
-        // Orientamento verso il mare aperto (nel Mediterraneo ed Europa la terraferma è prevalentemente a nord, il mare a sud)
-        if (normLat > 0 && wA.lat > 35 && wB.lat > 35) {
-          normLat = -normLat;
-          normLng = -normLng;
-        }
-
-        // Calcolo punto di controllo in mare aperto
-        const bendFactor = Math.min(distDeg * 0.22, 1.25);
-        const controlLat = midLat + normLat * bendFactor;
-        const controlLng = midLng + normLng * bendFactor;
-
-        // Campionamento Bézier quadratico fluido
-        const steps = 14;
-        const isLastSegment = (i === ports.length - 2 && w === waypoints.length - 2);
-        for (let s = 0; s < (isLastSegment ? steps + 1 : steps); s++) {
-          const t = s / steps;
-          const lat = (1 - t) * (1 - t) * wA.lat + 2 * (1 - t) * t * controlLat + t * t * wB.lat;
-          const lng = (1 - t) * (1 - t) * wA.lng + 2 * (1 - t) * t * controlLng + t * t * wB.lng;
-          fullPath.push([Number(lat.toFixed(5)), Number(lng.toFixed(5))]);
+      const smoothed = this.smoothNauticalWaypoints(segmentWaypoints);
+      for (let m = 0; m < smoothed.length; m++) {
+        if (fullPath.length === 0 ||
+            fullPath[fullPath.length - 1][0] !== smoothed[m][0] ||
+            fullPath[fullPath.length - 1][1] !== smoothed[m][1]) {
+          fullPath.push(smoothed[m]);
         }
       }
     }

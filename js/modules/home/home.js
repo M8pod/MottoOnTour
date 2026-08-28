@@ -64,10 +64,12 @@ const HomeModule = {
       }
     }
 
-    // Helper date strings for visual & VoiceOver
+    // Helper date strings and intensity for visual & VoiceOver
     let lastTripDateDisplay = "";
     let lastTripDateAria = "";
+    let lastTripIntensityAria = "";
     if (lastTrip) {
+      lastTripIntensityAria = GeoUtils.getIntensityAriaLabel(lastTrip);
       if (lastTrip.Data_Inizio_Globale && lastTrip.Data_Fine_Globale) {
         const d1 = CONFIG.formatDateDisplay(lastTrip.Data_Inizio_Globale);
         const d2 = CONFIG.formatDateDisplay(lastTrip.Data_Fine_Globale);
@@ -132,18 +134,20 @@ const HomeModule = {
       <section class="card" aria-labelledby="heading-last-trip">
         <h2 id="heading-last-trip">ULTIMO VIAGGIO</h2>
         ${lastTrip ? `
-          <button type="button" class="card card-mint card-interactive card-btn" onclick="DiarioModule.openTripDetails('${lastTrip.ID_Viaggio}')" aria-label="Ultimo viaggio: ${lastTrip.Nome_Viaggio}. ${lastTripDateAria}. ${lastTrip.intensity ? lastTrip.intensity.ariaLabel : ''}. Tipologia: ${lastTrip.Tipologia_Viaggio || 'Standard'}. Stati: ${(lastTrip.Stati || '-').replace(/\n/g, ', ')}. Apri dettagli viaggio.">
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
-              <h3 style="color: var(--mint); margin: 0;">${lastTrip.Nome_Viaggio}</h3>
-              ${GeoUtils.getIntensityBadgeHtml(lastTrip)}
+          <button type="button" class="card card-mint card-interactive card-btn" onclick="DiarioModule.openTripDetails('${lastTrip.ID_Viaggio}')" aria-label="Ultimo viaggio: ${lastTrip.Nome_Viaggio}. ${lastTripDateAria}. ${lastTripIntensityAria}. Tipologia: ${lastTrip.Tipologia_Viaggio || 'Standard'}. Stati: ${(lastTrip.Stati || '-').replace(/\n/g, ', ')}. Apri dettagli viaggio.">
+            <div aria-hidden="true">
+              <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+                <h3 style="color: var(--mint); margin: 0;">${lastTrip.Nome_Viaggio}</h3>
+                ${GeoUtils.getIntensityBadgeHtml(lastTrip)}
+              </div>
+              <p style="color: var(--pink-light); font-weight: 700; margin-top: 4px;">
+                ${lastTripDateDisplay}
+              </p>
+              <p style="color: #ccc; margin-top: 4px;">
+                Tipologia: <strong>${lastTrip.Tipologia_Viaggio || 'Standard'}</strong> | Stati: <strong>${(lastTrip.Stati || '-').replace(/\n/g, ', ')}</strong>
+              </p>
+              <span class="btn btn-sm btn-primary" style="margin-top: 10px; pointer-events: none;">VEDI SCHEDA VIAGGIO ➔</span>
             </div>
-            <p style="color: var(--pink-light); font-weight: 700; margin-top: 4px;">
-              ${lastTripDateDisplay}
-            </p>
-            <p style="color: #ccc; margin-top: 4px;">
-              Tipologia: <strong>${lastTrip.Tipologia_Viaggio || 'Standard'}</strong> | Stati: <strong>${(lastTrip.Stati || '-').replace(/\n/g, ', ')}</strong>
-            </p>
-            <span class="btn btn-sm btn-primary" style="margin-top: 10px; pointer-events: none;">VEDI SCHEDA VIAGGIO ➔</span>
           </button>
         ` : `
           <div class="empty-state">

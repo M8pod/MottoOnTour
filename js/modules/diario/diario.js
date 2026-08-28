@@ -65,8 +65,9 @@ const DiarioModule = {
                     const dEnd = CONFIG.formatDateDisplay(t.Data_Fine_Globale);
                     const dateText = dStart && dEnd ? `Dal ${dStart} al ${dEnd}` : (dStart ? `Data ${dStart}` : (t.Anno_Viaggio ? `Anno ${t.Anno_Viaggio}` : ''));
                     const badgeHtml = GeoUtils.getIntensityBadgeHtml(t);
+                    const intensityAria = GeoUtils.getIntensityAriaLabel(t);
                     return `
-                      <button type="button" class="card card-mint card-interactive card-btn" onclick="DiarioModule.openTripDetails('${t.ID_Viaggio}', 'diario')" aria-label="Scheda viaggio: ${t.Nome_Viaggio}. ${dateText}. ${t.intensity ? t.intensity.ariaLabel : ''}. ${t.Stati ? `Stati: ${t.Stati.replace(/\n/g, ', ')}.` : ''} Tocca due volte per aprire i dettagli del viaggio.">
+                      <button type="button" class="card card-mint card-interactive card-btn" onclick="DiarioModule.openTripDetails('${t.ID_Viaggio}', 'diario')" aria-label="Scheda viaggio: ${t.Nome_Viaggio}. ${dateText}. ${intensityAria}. ${t.Stati ? `Stati: ${t.Stati.replace(/\n/g, ', ')}.` : ''} Tocca due volte per aprire i dettagli del viaggio.">
                         <div aria-hidden="true">
                           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
                             <h3 style="color: var(--mint); margin: 0;">${t.Nome_Viaggio}</h3>
@@ -166,8 +167,9 @@ const DiarioModule = {
             const dEnd = CONFIG.formatDateDisplay(t.Data_Fine_Globale);
             const dateText = dStart && dEnd ? `Dal ${dStart} al ${dEnd}` : (dStart ? `Data ${dStart}` : (t.Anno_Viaggio || '-'));
             const badgeHtml = GeoUtils.getIntensityBadgeHtml(t);
+            const intensityAria = GeoUtils.getIntensityAriaLabel(t);
             return `
-              <button type="button" class="card card-mint card-interactive card-btn" onclick="DiarioModule.openTripDetails('${t.ID_Viaggio}', 'diario')" aria-label="Scheda viaggio: ${t.Nome_Viaggio}. ${dateText}. ${t.intensity ? t.intensity.ariaLabel : ''}. ${totalBudget > 0 ? `Spesa: ${totalBudget} Euro.` : ''} Tocca due volte per aprire i dettagli del viaggio.">
+              <button type="button" class="card card-mint card-interactive card-btn" onclick="DiarioModule.openTripDetails('${t.ID_Viaggio}', 'diario')" aria-label="Scheda viaggio: ${t.Nome_Viaggio}. ${dateText}. ${intensityAria}. ${totalBudget > 0 ? `Spesa: ${totalBudget} Euro.` : ''} Tocca due volte per aprire i dettagli del viaggio.">
                 <div aria-hidden="true">
                   <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
                     <h2 style="color: var(--mint); margin: 0; border: none;">${t.Nome_Viaggio}</h2>

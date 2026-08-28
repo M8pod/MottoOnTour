@@ -175,6 +175,7 @@ const PassaportoModule = {
       ciurmaPercent: totalTrips > 0 ? ((ciurmaCount / totalTrips) * 100).toFixed(0) : '0',
       budgetByCategory,
       mostExpensiveTrip,
+      maxCost,
       totalSouvenirs,
       totalDaysTraveled,
       totalKilometersTraveled,
@@ -189,83 +190,6 @@ const PassaportoModule = {
       bottom3IntenseTrips,
       geoStats
     };
-  },
-
-  renderMain(container) {
-    const stats = this.getAggregatedData();
-
-    container.innerHTML = `
-      <div class="action-bar" style="justify-content: space-between;">
-        <h1 id="screen-title" tabindex="-1">IL MIO PASSAPORTO</h1>
-        <div style="display: flex; gap: 8px;">
-          <button class="btn btn-sm btn-primary" onclick="PassaportoModule.openPdfReport()">
-            📄 GENERA PDF
-          </button>
-          <button class="btn btn-sm btn-pink" onclick="PassaportoModule.openChartModal()">
-            📊 GENERA GRAFICO
-          </button>
-        </div>
-      </div>
-
-      <p style="color: var(--pink-light); margin-bottom: 16px;">
-        Centro statistico, record geografici, analisi logistica ed economica.
-      </p>
-
-      ${stats.totalTrips === 0 ? `
-        <div class="empty-state">
-          <p class="empty-state-text">
-            IL TUO PASSAPORTO È PRONTO!<br>
-            REGISTRA IL TUO PRIMO VIAGGIO NEL DIARIO DI BORDO PER INIZIARE A CALCOLARE LE TUE STATISTICHE, I RECORD E I GRAFICI NEL MONDO.
-          </p>
-        </div>
-      ` : ''}
-
-      <!-- MENU A PULSANTI PER CATEGORIE STATISTICHE -->
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
-        <button class="btn btn-block" style="min-height: 70px; flex-direction: column; gap: 4px;" onclick="PassaportoModule.openCategory('geografia')">
-          <span style="font-size: 1.4rem;">🌍</span>
-          <span>GEOGRAFIA E MONDO</span>
-        </button>
-
-        <button class="btn btn-block" style="min-height: 70px; flex-direction: column; gap: 4px;" onclick="PassaportoModule.openCategory('storico')">
-          <span style="font-size: 1.4rem;">📊</span>
-          <span>STORICO E LOGISTICA</span>
-        </button>
-
-        <button class="btn btn-block" style="min-height: 70px; flex-direction: column; gap: 4px;" onclick="PassaportoModule.openCategory('compagni')">
-          <span style="font-size: 1.4rem;">👥</span>
-          <span>COMPAGNI DI VIAGGIO</span>
-        </button>
-
-        <button class="btn btn-block" style="min-height: 70px; flex-direction: column; gap: 4px;" onclick="PassaportoModule.openCategory('economia')">
-          <span style="font-size: 1.4rem;">💰</span>
-          <span>ECONOMIA E SOUVENIR</span>
-        </button>
-      </div>
-
-      <!-- SINTESI DEI TOTALI -->
-      <section class="card">
-        <h2>RIEPILOGO GENERALE</h2>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
-          <div class="stat-box">
-            <div class="stat-label">VIAGGI TOTALI</div>
-            <div class="stat-value">${stats.totalTrips}</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-label">STATI NEL MONDO</div>
-            <div class="stat-value">${stats.visitedStatesCount} / 195 (${stats.worldPercentage}%)</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-label">SPESA COMPLESSIVA</div>
-            <div class="stat-value">€ ${stats.totalSpend.toLocaleString('it-IT')}</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-label">SOUVENIR RACCOLTI</div>
-            <div class="stat-value">${stats.totalSouvenirs}</div>
-          </div>
-        </div>
-      </section>
-    `;
   },
 
   openCategory(cat) {
@@ -286,7 +210,7 @@ const PassaportoModule = {
     const cityName = this.selectedCity;
     const trips = API.data[CONFIG.SHEETS.DIARIO] || [];
     const coords = API.data[CONFIG.SHEETS.COORDINATE] || [];
-    const cityCoord = coords.find(co => co.Citta.toUpperCase() === String(cityName).toUpperCase()) || {};
+    const cityCoord = coords.find(co => co && co.Citta && co.Citta.toUpperCase() === String(cityName).toUpperCase()) || {};
     const flag = GeoUtils.getFlag(cityCoord.Stato || 'Italia');
 
     // Trova tutti i viaggi che contengono questa città
@@ -380,7 +304,7 @@ const PassaportoModule = {
           <button class="btn btn-sm btn-pink" onclick="PassaportoModule.openPdfReport()">
             📄 GENERA PDF
           </button>
-          <button class="btn btn-sm btn-primary" onclick="PassaportoModule.openChartExportModal()">
+          <button class="btn btn-sm btn-primary" onclick="PassaportoModule.openChartModal()">
             📊 ESPORTA GRAFICI
           </button>
         </div>
@@ -711,7 +635,7 @@ const PassaportoModule = {
         </p>
         <div style="display: flex; flex-wrap: wrap; gap: 8px;">
           ${Array.from(stats.visitedCitiesMap.keys()).sort().map(c => {
-            const cityCoord = coords.find(co => co.Citta.toUpperCase() === c.toUpperCase()) || {};
+            const cityCoord = coords.find(co => co && co.Citta && co.Citta.toUpperCase() === c.toUpperCase()) || {};
             const flag = GeoUtils.getFlag(cityCoord.Stato || (stats.cityStateMap && stats.cityStateMap.get(c)) || 'Italia');
             return `
               <button type="button" class="btn btn-sm btn-pink" data-city="${encodeURIComponent(c)}" onclick="PassaportoModule.openCityDrillDown(decodeURIComponent(this.getAttribute('data-city')))" aria-label="${c} ${flag}. Tocca due volte per aprire l'elenco dei viaggi correlati.">
@@ -917,7 +841,7 @@ const PassaportoModule = {
           <div class="stat-box">
             <div class="stat-label">VIAGGIO PIÙ COSTOSO</div>
             <div class="stat-value" style="font-size: 1.1rem;">
-              ${stats.mostExpensiveTrip ? `${stats.mostExpensiveTrip.Nome_Viaggio} (€ ${stats.maxCost.toLocaleString('it-IT')})` : 'Nessuno'}
+              ${stats.mostExpensiveTrip ? `${stats.mostExpensiveTrip.Nome_Viaggio} (€ ${(stats.maxCost || 0).toLocaleString('it-IT')})` : 'Nessuno'}
             </div>
           </div>
           <div class="stat-box">
