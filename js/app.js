@@ -42,9 +42,19 @@ const App = {
       }
     });
 
-    // Register Service Worker
+    // Register Service Worker and check updates
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js').catch(() => {});
+      navigator.serviceWorker.register('./sw.js').then((reg) => {
+        reg.update().catch(() => {});
+      }).catch(() => {});
+
+      let isRefreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!isRefreshing) {
+          isRefreshing = true;
+          window.location.reload();
+        }
+      });
     }
   },
 
@@ -124,34 +134,68 @@ const App = {
     });
 
     // Render Module View
-    switch (this.currentModule) {
-      case 'home':
-        HomeModule.render(container);
-        break;
-      case 'diario':
-        DiarioModule.render(container);
-        break;
-      case 'passaporto':
-        PassaportoModule.render(container);
-        break;
-      case 'sfide':
-        SfideModule.render(container);
-        break;
-      case 'mappe':
-        MappeModule.render(container);
-        break;
-      case 'in-partenza':
-        InPartenzaModule.render(container);
-        break;
-      case 'cassetto':
-        CassettoModule.render(container);
-        break;
-      case 'impostazioni':
-        ImpostazioniModule.render(container);
-        break;
-      default:
-        HomeModule.render(container);
+    try {
+      switch (this.currentModule) {
+        case 'home':
+          HomeModule.render(container);
+          break;
+        case 'diario':
+          DiarioModule.render(container);
+          break;
+        case 'passaporto':
+          PassaportoModule.render(container);
+          break;
+        case 'sfide':
+          SfideModule.render(container);
+          break;
+        case 'mappe':
+          MappeModule.render(container);
+          break;
+        case 'in-partenza':
+          InPartenzaModule.render(container);
+          break;
+        case 'cassetto':
+          CassettoModule.render(container);
+          break;
+        case 'impostazioni':
+          ImpostazioniModule.render(container);
+          break;
+        default:
+          HomeModule.render(container);
+      }
+    } catch (err) {
+      console.error(`Errore nel rendering del modulo ${this.currentModule}:`, err);
+      container.innerHTML = `
+        <div class="empty-state" style="border-color: var(--danger); background: rgba(255,50,50,0.06); margin-top: 20px;">
+          <h2 style="color: var(--danger); margin-top: 0;">⚠️ Si è verificato un errore nel caricamento della schermata</h2>
+          <p style="color: #ccc; margin: 10px 0;">${err.message || 'Errore imprevisto'}</p>
+          <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 14px;">
+            <button class="btn btn-sm btn-primary" onclick="App.navigate('home')">🏠 TORNA ALLA HOME</button>
+            <button class="btn btn-sm btn-pink" onclick="App.forceRefreshApp()">🔄 AGGIORNA APPLICAZIONE</button>
+          </div>
+        </div>
+      `;
     }
+  },
+
+  // Forza lo svuotamento di tutte le cache locali e service worker per aggiornare l'app
+  async forceRefreshApp() {
+    this.notify("Svuotamento cache e riavvio dell'applicazione in corso...");
+    try {
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+      }
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const reg of registrations) {
+          await reg.unregister();
+        }
+      }
+    } catch (e) {}
+    localStorage.removeItem('motto_database_cache');
+    localStorage.removeItem('motto_custom_cities_cache');
+    window.location.reload(true);
   },
 
   // ARIA Live Polite Screen Reader Announcer

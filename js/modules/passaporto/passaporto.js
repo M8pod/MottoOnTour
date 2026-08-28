@@ -9,20 +9,43 @@ const PassaportoModule = {
   selectedCarrier: null,
 
   render(container) {
-    if (this.currentCategory === 'geografia') {
-      this.renderGeografia(container);
-    } else if (this.currentCategory === 'citta_dettaglio') {
-      this.renderCityDrillDown(container);
-    } else if (this.currentCategory === 'intensita') {
-      this.renderIntensita(container);
-    } else if (this.currentCategory === 'storico') {
-      this.renderStorico(container);
-    } else if (this.currentCategory === 'compagni') {
-      this.renderCompagni(container);
-    } else if (this.currentCategory === 'economia') {
-      this.renderEconomia(container);
-    } else {
-      this.renderMain(container);
+    try {
+      if (this.currentCategory === 'geografia') {
+        this.renderGeografia(container);
+      } else if (this.currentCategory === 'citta_dettaglio') {
+        this.renderCityDrillDown(container);
+      } else if (this.currentCategory === 'intensita') {
+        this.renderIntensita(container);
+      } else if (this.currentCategory === 'storico') {
+        this.renderStorico(container);
+      } else if (this.currentCategory === 'compagni') {
+        this.renderCompagni(container);
+      } else if (this.currentCategory === 'economia') {
+        this.renderEconomia(container);
+      } else {
+        this.renderMain(container);
+      }
+    } catch (err) {
+      console.error("Errore nel modulo Passaporto:", err);
+      container.innerHTML = `
+        <div class="action-bar">
+          <button class="btn btn-sm btn-pink" onclick="PassaportoModule.currentCategory='main'; App.render();">
+            ⬅️ TORNA AL PASSAPORTO
+          </button>
+        </div>
+        <div class="empty-state" style="border-color: var(--danger); background: rgba(255,50,50,0.06); margin-top: 16px;">
+          <h2 style="color: var(--danger); margin-top: 0;">⚠️ Si è verificato un problema nel calcolo delle statistiche</h2>
+          <p style="color: #ccc; margin: 10px 0;">${err.message || 'Errore imprevisto'}</p>
+          <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 14px;">
+            <button class="btn btn-sm btn-primary" onclick="PassaportoModule.currentCategory='main'; App.render();">
+              🔄 RICARICA PASSAPORTO
+            </button>
+            <button class="btn btn-sm btn-pink" onclick="App.navigate('home')">
+              🏠 TORNA ALLA HOME
+            </button>
+          </div>
+        </div>
+      `;
     }
   },
 
@@ -61,7 +84,7 @@ const PassaportoModule = {
       totalKilometersTraveled += km;
 
       // Year
-      const y = t.Anno_Viaggio || (t.Data_Inizio_Globale ? t.Data_Inizio_Globale.split('-')[0] : 'Altro');
+      const y = t.Anno_Viaggio || (t.Data_Inizio_Globale ? String(t.Data_Inizio_Globale).split('-')[0] : 'Altro');
       tripsByYear[y] = (tripsByYear[y] || 0) + 1;
 
       // States
@@ -111,7 +134,8 @@ const PassaportoModule = {
       // Budget
       let tripCost = 0;
       CONFIG.EXPENSE_CATEGORIES.forEach(c => {
-        const val = Number(t[c.key] || 0);
+        const rawVal = t[c.key];
+        const val = (typeof rawVal === 'number') ? rawVal : (parseFloat(String(rawVal || 0).replace(',', '.')) || 0);
         budgetByCategory[c.key] += val;
         tripCost += val;
       });
@@ -137,7 +161,8 @@ const PassaportoModule = {
 
     const visitedStatesCount = visitedStatesMap.size;
     const totalCitiesCount = visitedCitiesMap.size;
-    const worldPercentage = ((visitedStatesCount / CONFIG.TOTAL_WORLD_COUNTRIES) * 100).toFixed(1).replace('.', ',');
+    const totalCountries = CONFIG.TOTAL_WORLD_COUNTRIES || 195;
+    const worldPercentage = ((visitedStatesCount / totalCountries) * 100).toFixed(1).replace('.', ',');
     const geoStats = GeoUtils.computeGeoStats(coords);
 
     // Giri della terra (40.075 km) e Distanza Terra-Luna (384.400 km)
@@ -152,7 +177,7 @@ const PassaportoModule = {
     const moonPercent = ((totalKilometersTraveled / moonDistance) * 100).toFixed(1);
 
     // Classifica di Intensità Viaggi (Bollini 1-10)
-    const rankedByIntensity = [...tripsWithIntensity].sort((a, b) => b.intensity.computedScore - a.intensity.computedScore || b.km - a.km);
+    const rankedByIntensity = [...tripsWithIntensity].sort((a, b) => ((b.intensity && b.intensity.computedScore) || 0) - ((a.intensity && a.intensity.computedScore) || 0) || (b.km || 0) - (a.km || 0));
     const top3IntenseTrips = rankedByIntensity.slice(0, 3);
     const bottom3IntenseTrips = [...rankedByIntensity].reverse().slice(0, 3);
 

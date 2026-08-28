@@ -72,9 +72,12 @@ const ImpostazioniModule = {
           </label>
         </div>
 
-        <div style="margin-top: 10px;">
+        <div style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
           <button class="btn btn-sm btn-primary" onclick="ImpostazioniModule.testDriveConnection()">
             ⚡ TEST CONNESSIONE GOOGLE DRIVE
+          </button>
+          <button class="btn btn-sm btn-pink" onclick="App.forceRefreshApp()">
+            🔄 SVUOTA CACHE & AGGIORNA APP
           </button>
         </div>
 
