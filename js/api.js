@@ -314,73 +314,127 @@ const API = {
 
   // Riconciliazione totale e pulizia delle coordinate geografiche da tutti i viaggi attivi nel Diario
   async reconcileCoordinates() {
-    const diarioTrips = this.data[CONFIG.SHEETS.DIARIO] || [];
-    const currentCoords = this.data[CONFIG.SHEETS.COORDINATE] || [];
-    const newCoordMap = new Map();
+    try {
+      const diarioTrips = this.data[CONFIG.SHEETS.DIARIO] || [];
+      const currentCoords = this.data[CONFIG.SHEETS.COORDINATE] || [];
+      const newCoordMap = new Map();
 
-    for (const trip of diarioTrips) {
-      const states = String(trip.Stati || "").split("\n").map(s => s.trim()).filter(Boolean);
-      const cities = String(trip.Citta || "").split("\n").map(c => c.trim()).filter(Boolean);
-      const year = String(trip.Anno_Viaggio || (trip.Data_Inizio_Globale ? trip.Data_Inizio_Globale.split('-')[0] : new Date().getFullYear())).trim();
-      const tripId = String(trip.ID_Viaggio || "").trim();
+      for (const trip of diarioTrips) {
+        const states = String(trip.Stati || "").split("\n").map(s => s.trim()).filter(Boolean);
+        const cities = String(trip.Citta || "").split("\n").map(c => c.trim()).filter(Boolean);
+        const year = String(trip.Anno_Viaggio || (trip.Data_Inizio_Globale ? trip.Data_Inizio_Globale.split('-')[0] : new Date().getFullYear())).trim();
+        const tripId = String(trip.ID_Viaggio || "").trim();
 
-      for (let i = 0; i < cities.length; i++) {
-        const rawCity = cities[i];
-        const parsed = GeoUtils.parseCityAndState(rawCity, states);
-        const city = parsed.city || rawCity;
-        const state = parsed.state || states[i] || states[0] || "ITALIA";
-        const cleanCityName = String(city).trim().toUpperCase();
-        const cleanStateName = String(state).trim().toUpperCase();
-        const coordId = `${cleanCityName}_${cleanStateName}`;
+        for (let i = 0; i < cities.length; i++) {
+          const rawCity = cities[i];
+          const parsed = GeoUtils.parseCityAndState(rawCity, states);
+          const city = parsed.city || rawCity;
+          const state = parsed.state || states[i] || states[0] || "ITALIA";
+          const cleanCityName = String(city).trim().toUpperCase();
+          const cleanStateName = String(state).trim().toUpperCase();
+          const coordId = `${cleanCityName}_${cleanStateName}`;
 
-        if (!newCoordMap.has(coordId)) {
-          let existing = currentCoords.find(c => c.ID_Coordinata === coordId || (c.Citta === cleanCityName && c.Stato === cleanStateName));
-          let lat = existing && existing.Latitudine !== "" && !isNaN(Number(existing.Latitudine)) ? Number(existing.Latitudine) : null;
-          let lng = existing && existing.Longitudine !== "" && !isNaN(Number(existing.Longitudine)) ? Number(existing.Longitudine) : null;
-          let continent = existing && existing.Continente ? existing.Continente : null;
-          let emisfero = existing && existing.Emisfero ? existing.Emisfero : null;
+          if (!newCoordMap.has(coordId)) {
+            let existing = currentCoords.find(c => c.ID_Coordinata === coordId || (c.Citta === cleanCityName && c.Stato === cleanStateName));
+            let lat = existing && existing.Latitudine !== "" && !isNaN(Number(existing.Latitudine)) ? Number(existing.Latitudine) : null;
+            let lng = existing && existing.Longitudine !== "" && !isNaN(Number(existing.Longitudine)) ? Number(existing.Longitudine) : null;
+            let continent = existing && existing.Continente ? existing.Continente : null;
+            let emisfero = existing && existing.Emisfero ? existing.Emisfero : null;
 
-          if (lat === null || lng === null || (lat === 0 && lng === 0)) {
-            const geo = await GeoUtils.fetchCoordinatesOnline(city, state);
-            if (geo) {
-              lat = geo.lat;
-              lng = geo.lng;
-              continent = geo.continente || GeoUtils.getContinent(state);
-              emisfero = geo.emisfero || GeoUtils.getEmisfero(lat);
-            } else {
-              const countryInfo = GeoUtils.getCountryInfo(state);
-              lat = countryInfo.lat || 0;
-              lng = countryInfo.lng || 0;
-              continent = countryInfo.continent || "Europa";
-              emisfero = GeoUtils.getEmisfero(lat);
+            if (lat === null || lng === null || (lat === 0 && lng === 0)) {
+              try {
+                const geo = await GeoUtils.fetchCoordinatesOnline(city, state);
+                if (geo) {
+                  lat = geo.lat;
+                  lng = geo.lng;
+                  continent = geo.continente || GeoUtils.getContinent(state);
+                  emisfero = geo.emisfero || GeoUtils.getEmisfero(lat);
+                } else {
+                  const countryInfo = GeoUtils.getCountryInfo(state);
+                  lat = countryInfo.lat || 0;
+                  lng = countryInfo.lng || 0;
+                  continent = countryInfo.continent || "Europa";
+                  emisfero = GeoUtils.getEmisfero(lat);
+                }
+              } catch (geoErr) {
+                const countryInfo = GeoUtils.getCountryInfo(state);
+                lat = countryInfo.lat || 0;
+                lng = countryInfo.lng || 0;
+                continent = countryInfo.continent || "Europa";
+                emisfero = GeoUtils.getEmisfero(lat);
+              }
+            }
+
+            newCoordMap.set(coordId, {
+              ID_Coordinata: coordId,
+              Citta: cleanCityName,
+              Stato: cleanStateName,
+              Latitudine: lat,
+              Longitudine: lng,
+              Continente: continent || GeoUtils.getContinent(cleanStateName),
+              Emisfero: emisfero || GeoUtils.getEmisfero(lat),
+              ID_Viaggio_Riferimento: tripId,
+              Anni_Visita: year
+            });
+          } else {
+            const item = newCoordMap.get(coordId);
+            if (tripId && !String(item.ID_Viaggio_Riferimento || '').includes(tripId)) {
+              item.ID_Viaggio_Riferimento = item.ID_Viaggio_Riferimento ? `${item.ID_Viaggio_Riferimento}, ${tripId}` : tripId;
+            }
+            if (year && !String(item.Anni_Visita || '').includes(year)) {
+              item.Anni_Visita = item.Anni_Visita ? `${item.Anni_Visita}, ${year}` : year;
             }
           }
+        }
+      }
 
-          newCoordMap.set(coordId, {
-            ID_Coordinata: coordId,
-            Citta: cleanCityName,
-            Stato: cleanStateName,
-            Latitudine: lat,
-            Longitudine: lng,
-            Continente: continent || GeoUtils.getContinent(cleanStateName),
-            Emisfero: emisfero || GeoUtils.getEmisfero(lat),
-            ID_Viaggio_Riferimento: tripId,
-            Anni_Visita: year
-          });
-        } else {
-          const item = newCoordMap.get(coordId);
-          if (tripId && !String(item.ID_Viaggio_Riferimento || '').includes(tripId)) {
-            item.ID_Viaggio_Riferimento = item.ID_Viaggio_Riferimento ? `${item.ID_Viaggio_Riferimento}, ${tripId}` : tripId;
+      this.data[CONFIG.SHEETS.COORDINATE] = Array.from(newCoordMap.values());
+      this.saveLocalCache();
+    } catch (reconcileErr) {
+      console.warn("Could not complete reconcileCoordinates:", reconcileErr);
+    }
+  },
+
+  // Modifica e normalizzazione retroattiva delle compagnie nei viaggi passati (Punto 3)
+  async updateCarrierNameRetroactively(oldName, newName) {
+    if (!oldName || !newName) return { count: 0 };
+    const cleanOld = String(oldName).trim();
+    const cleanNew = String(newName).trim();
+    if (cleanOld.toLowerCase() === cleanNew.toLowerCase()) return { count: 0 };
+
+    let updatedTrips = 0;
+    const trips = this.data[CONFIG.SHEETS.DIARIO] || [];
+
+    for (const trip of trips) {
+      if (trip.Compagnie_Vettori) {
+        const carriers = String(trip.Compagnie_Vettori).split('\n').map(c => c.trim()).filter(Boolean);
+        let changed = false;
+        const newCarriers = [];
+        
+        carriers.forEach(c => {
+          if (c.toLowerCase() === cleanOld.toLowerCase()) {
+            if (!newCarriers.some(nc => nc.toLowerCase() === cleanNew.toLowerCase())) {
+              newCarriers.push(cleanNew);
+            }
+            changed = true;
+          } else {
+            if (!newCarriers.some(nc => nc.toLowerCase() === c.toLowerCase())) {
+              newCarriers.push(c);
+            }
           }
-          if (year && !String(item.Anni_Visita || '').includes(year)) {
-            item.Anni_Visita = item.Anni_Visita ? `${item.Anni_Visita}, ${year}` : year;
-          }
+        });
+
+        if (changed) {
+          trip.Compagnie_Vettori = newCarriers.join('\n');
+          updatedTrips++;
+          // Sincronizzazione remota in background
+          this.request('saveRecord', { sheetName: CONFIG.SHEETS.DIARIO, record: trip, idKey: 'ID_Viaggio' }).catch(() => {});
         }
       }
     }
 
-    this.data[CONFIG.SHEETS.COORDINATE] = Array.from(newCoordMap.values());
     this.saveLocalCache();
+    return { count: updatedTrips };
   },
 
   // Debounced queue sync for fast checkbox clicks (Challenge module)

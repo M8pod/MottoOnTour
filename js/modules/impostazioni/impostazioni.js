@@ -13,7 +13,7 @@ const ImpostazioniModule = {
     container.innerHTML = `
       <div class="action-bar">
         <button class="btn btn-sm btn-pink" onclick="App.navigate('home')">
-          ⬅️ TORNA ALLA HOME
+          <span aria-hidden="true">⬅️ </span>TORNA ALLA HOME
         </button>
       </div>
 
@@ -34,7 +34,18 @@ const ImpostazioniModule = {
         </div>
 
         <button class="btn btn-sm btn-danger" style="margin-top: 10px;" onclick="App.lockApp()">
-          🔒 BLOCCA APPLICAZIONE ADESSO
+          <span aria-hidden="true">🔒 </span>BLOCCA APPLICAZIONE ADESSO
+        </button>
+      </section>
+
+      <!-- GESTIONE & NORMALIZZAZIONE COMPAGNIE E VETTORI (PUNTO 3) -->
+      <section class="card">
+        <h2>GESTIONE & NORMALIZZAZIONE COMPAGNIE</h2>
+        <p style="color: #ccc; margin-bottom: 12px;">
+          Rinomina o unifica retroattivamente le compagnie salvate nei viaggi passati (ad es. per correggere refusi o unificare doppioni).
+        </p>
+        <button class="btn btn-sm btn-primary" onclick="ImpostazioniModule.openCompanyManagerModal()">
+          <span aria-hidden="true">✈️ </span>GESTISCI E RINOMINA COMPAGNIE
         </button>
       </section>
 
@@ -47,11 +58,11 @@ const ImpostazioniModule = {
 
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
           <button class="btn btn-sm btn-primary" onclick="ImpostazioniModule.downloadBackup()">
-            💾 ESEGUI BACKUP LOCALE (JSON)
+            <span aria-hidden="true">💾 </span>ESEGUI BACKUP LOCALE (JSON)
           </button>
 
           <label class="btn btn-sm btn-pink" style="cursor: pointer;">
-            📥 RIPRISTINA DA BACKUP
+            <span aria-hidden="true">📥 </span>RIPRISTINA DA BACKUP
             <input type="file" id="file-restore" accept=".json" style="display: none;" onchange="ImpostazioniModule.handleRestoreFile(event)">
           </label>
         </div>
@@ -74,10 +85,10 @@ const ImpostazioniModule = {
 
         <div style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
           <button class="btn btn-sm btn-primary" onclick="ImpostazioniModule.testDriveConnection()">
-            ⚡ TEST CONNESSIONE GOOGLE DRIVE
+            <span aria-hidden="true">⚡ </span>TEST CONNESSIONE GOOGLE DRIVE
           </button>
           <button class="btn btn-sm btn-pink" onclick="App.forceRefreshApp()">
-            🔄 SVUOTA CACHE & AGGIORNA APP
+            <span aria-hidden="true">🔄 </span>SVUOTA CACHE & AGGIORNA APP
           </button>
         </div>
 
@@ -94,7 +105,7 @@ const ImpostazioniModule = {
           Guida rapida e regole per una compilazione ottimale dei dati accessibili con VoiceOver.
         </p>
         <button class="btn btn-sm btn-primary" onclick="ImpostazioniModule.openMiniManuale()">
-          📖 CONSULTA MINI MANUALE
+          <span aria-hidden="true">📖 </span>CONSULTA MINI MANUALE
         </button>
       </section>
 
@@ -124,6 +135,62 @@ const ImpostazioniModule = {
         </div>
       </section>
     `;
+  },
+
+  // Strumento di gestione e rinomina retroattiva delle compagnie (Punto 3)
+  openCompanyManagerModal() {
+    const trips = API.data[CONFIG.SHEETS.DIARIO] || [];
+    const carrierCountMap = new Map();
+
+    trips.forEach(t => {
+      if (t.Compagnie_Vettori) {
+        String(t.Compagnie_Vettori).split('\n').map(c => c.trim()).filter(Boolean).forEach(c => {
+          carrierCountMap.set(c, (carrierCountMap.get(c) || 0) + 1);
+        });
+      }
+    });
+
+    const carriersList = Array.from(carrierCountMap.entries()).sort((a, b) => a[0].localeCompare(b[0], 'it', { sensitivity: 'base' }));
+
+    const bodyContent = carriersList.length > 0 ? `
+      <p style="color: var(--pink-light); margin-bottom: 12px; font-size: 0.9rem;">
+        Seleziona una compagnia per rinominarla o unificarla in tutti i viaggi del Diario di bordo:
+      </p>
+      <div style="max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+        ${carriersList.map(([name, count]) => `
+          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15);">
+            <div>
+              <span style="font-weight: 700; color: #FFFFFF;">${name}</span>
+              <span style="color: var(--mint); font-size: 0.8rem; margin-left: 8px;">(${count} ${count === 1 ? 'viaggio' : 'viaggi'})</span>
+            </div>
+            <button class="btn btn-sm btn-pink" onclick="ImpostazioniModule.promptRenameCompany('${name.replace(/'/g, "\\'")}')">
+              ✏️ Rinomina
+            </button>
+          </div>
+        `).join('')}
+      </div>
+    ` : `<p style="color: var(--text-muted);">Nessuna compagnia attualmente registrata nei viaggi.</p>`;
+
+    App.showModal({
+      title: "GESTIONE COMPAGNIE E VETTORI",
+      bodyHtml: bodyContent,
+      confirmLabel: "CHIUDI",
+      onConfirm: () => {}
+    });
+  },
+
+  promptRenameCompany(oldName) {
+    const newName = prompt(`Inserisci il nuovo nome corretto per la compagnia "${oldName}":`, oldName);
+    if (!newName || newName.trim() === oldName.trim()) return;
+
+    const normalized = CONFIG.normalizeCarrierName(newName.trim());
+
+    API.updateCarrierNameRetroactively(oldName, normalized).then(res => {
+      SoundFX.playConfirm();
+      App.notify(`Compagnia aggiornata in ${res.count} viaggi con successo!`);
+      App.hideModal();
+      setTimeout(() => ImpostazioniModule.openCompanyManagerModal(), 200);
+    });
   },
 
   toggleRequirePin(checked) {
@@ -188,7 +255,7 @@ const ImpostazioniModule = {
             </p>
             <p style="color: #ccc; margin-top: 8px;">Confermi di voler procedere?</p>
           `,
-          confirmLabel: "📥 CONFERMA RIPRISTINO",
+          confirmLabel: "CONFERMA RIPRISTINO",
           onConfirm: async () => {
             App.notify("Ripristino del database in corso...");
             await API.restoreBackup(backupData);

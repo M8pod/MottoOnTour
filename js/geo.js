@@ -225,11 +225,18 @@ const CITIES_DB = {
   "CRETA": { lat: 35.3387, lng: 25.1442, stato: "GRECIA", continente: "Europa" },
   "HERAKLION": { lat: 35.3387, lng: 25.1442, stato: "GRECIA", continente: "Europa" },
   "CORFU": { lat: 39.6243, lng: 19.9217, stato: "GRECIA", continente: "Europa" },
+  "CORFÙ": { lat: 39.6243, lng: 19.9217, stato: "GRECIA", continente: "Europa" },
   "ZACINTO": { lat: 37.7870, lng: 20.8999, stato: "GRECIA", continente: "Europa" },
+  "ZANTE": { lat: 37.7870, lng: 20.8999, stato: "GRECIA", continente: "Europa" },
   "DUBROVNIK": { lat: 42.6507, lng: 18.0944, stato: "CROAZIA", continente: "Europa" },
   "SPALATO": { lat: 43.5081, lng: 16.4402, stato: "CROAZIA", continente: "Europa" },
+  "SPLIT": { lat: 43.5081, lng: 16.4402, stato: "CROAZIA", continente: "Europa" },
   "ZARA": { lat: 44.1194, lng: 15.2314, stato: "CROAZIA", continente: "Europa" },
+  "ZADAR": { lat: 44.1194, lng: 15.2314, stato: "CROAZIA", continente: "Europa" },
   "ZAGABRIA": { lat: 45.8150, lng: 15.9819, stato: "CROAZIA", continente: "Europa" },
+  "KOTOR": { lat: 42.4247, lng: 18.7712, stato: "MONTENEGRO", continente: "Europa" },
+  "CATTARO": { lat: 42.4247, lng: 18.7712, stato: "MONTENEGRO", continente: "Europa" },
+  "BRATISLAVA": { lat: 48.1486, lng: 17.1077, stato: "SLOVACCHIA", continente: "Europa" },
   "LUBIANA": { lat: 46.0569, lng: 14.5058, stato: "SLOVENIA", continente: "Europa" },
   "BLED": { lat: 46.3683, lng: 14.1146, stato: "SLOVENIA", continente: "Europa" },
   "LA VALLETTA": { lat: 35.8989, lng: 14.5146, stato: "MALTA", continente: "Europa" },
@@ -586,7 +593,7 @@ const GeoUtils = {
     cities.forEach(rawCity => {
       const parsed = this.parseCityAndState(rawCity, states);
       const c = this.getCityCoordinates(parsed.city, parsed.state);
-      if (c && c.lat && c.lng) {
+      if (c && typeof c.lat === 'number' && typeof c.lng === 'number' && !isNaN(c.lat) && !isNaN(c.lng)) {
         coords.push({ lat: c.lat, lng: c.lng });
       }
     });
@@ -594,9 +601,9 @@ const GeoUtils = {
     if (coords.length === 0) {
       if (states.length > 0) {
         const cInfo = this.getCountryInfo(states[0]);
-        if (cInfo && cInfo.lat && cInfo.lng) {
+        if (cInfo && typeof cInfo.lat === 'number' && typeof cInfo.lng === 'number' && !isNaN(cInfo.lat) && !isNaN(cInfo.lng)) {
           const d = this.calculateDistance(vLat, vLng, cInfo.lat, cInfo.lng);
-          return (d || 0) * 2;
+          return Math.round((d || 0) * 2);
         }
       }
       return 0;
@@ -604,26 +611,29 @@ const GeoUtils = {
 
     let totalKm = 0;
     // Partenza da Venezia verso la prima tappa
-    totalKm += this.calculateDistance(vLat, vLng, coords[0].lat, coords[0].lng) || 0;
+    const distFirst = this.calculateDistance(vLat, vLng, coords[0].lat, coords[0].lng);
+    if (!isNaN(distFirst)) totalKm += distFirst;
 
     // Tragitto tra le varie tappe del viaggio
     for (let i = 0; i < coords.length - 1; i++) {
-      totalKm += this.calculateDistance(coords[i].lat, coords[i].lng, coords[i + 1].lat, coords[i + 1].lng) || 0;
+      const dStep = this.calculateDistance(coords[i].lat, coords[i].lng, coords[i + 1].lat, coords[i + 1].lng);
+      if (!isNaN(dStep)) totalKm += dStep;
     }
 
     // Rientro a Venezia dall'ultima tappa
-    totalKm += this.calculateDistance(coords[coords.length - 1].lat, coords[coords.length - 1].lng, vLat, vLng) || 0;
+    const distLast = this.calculateDistance(coords[coords.length - 1].lat, coords[coords.length - 1].lng, vLat, vLng);
+    if (!isNaN(distLast)) totalKm += distLast;
 
-    return Math.round(totalKm);
+    return isNaN(totalKm) ? 0 : Math.round(totalKm);
   },
 
   // Algoritmo di punteggio e attribuzione del Bollino di Intensità da 1 a 10
   calculateTripIntensityScore(trip) {
-    if (!trip) return this.INTENSITY_BADGES[1];
+    if (!trip) return { ...this.INTENSITY_BADGES[1], computedScore: 1, level: 1, days: 1, km: 0 };
     let score = 0;
 
     // 1. Durata in giorni (max 2.5 punti)
-    const days = this.calculateTripDurationDays(trip);
+    const days = this.calculateTripDurationDays(trip) || 1;
     if (days >= 15) score += 2.5;
     else if (days >= 8) score += 2.0;
     else if (days >= 4) score += 1.5;
@@ -649,24 +659,26 @@ const GeoUtils = {
     // 4. Souvenir e Memorie/Esperienze registrate (max 2.0 punti)
     const souvenirs = String(trip.Souvenir || '').split('\n').map(s => s.trim()).filter(Boolean);
     const hasDrive = Boolean(trip.Link_Cartella_Drive && trip.Link_Cartella_Drive.trim().length > 5);
-    const hasNotes = Boolean(trip.Attivita_Esperienze || trip.Note_Personali || trip.Note_Consigli);
+    const hasNotes = Boolean(trip.Attivita_Esperienze || trip.Note_Personali || trip.Note_Consigli || trip.Esperienze_Luoghi || trip.Note_Varie);
     if (souvenirs.length >= 4) score += 1.0;
     else if (souvenirs.length >= 1) score += 0.5;
     if (hasDrive) score += 0.5;
     if (hasNotes) score += 0.5;
 
     // 5. Distanza chilometrica percorsa e Budget (max 1.0 punto)
-    const km = this.calculateTripDistanceKm(trip);
+    const km = this.calculateTripDistanceKm(trip) || 0;
     let totalCost = 0;
     if (CONFIG.EXPENSE_CATEGORIES) {
       CONFIG.EXPENSE_CATEGORIES.forEach(cat => {
-        totalCost += Number(trip[cat.key] || 0);
+        const val = Number(trip[cat.key]);
+        if (!isNaN(val)) totalCost += val;
       });
     }
     if (km > 4000 || totalCost > 2500) score += 1.0;
     else if (km > 1500 || totalCost > 1000) score += 0.5;
 
-    const level = Math.max(1, Math.min(10, Math.round(score)));
+    if (isNaN(score) || !isFinite(score)) score = 1;
+    const level = Math.max(1, Math.min(10, Math.round(score) || 1));
     const badgeInfo = this.INTENSITY_BADGES[level] || this.INTENSITY_BADGES[1];
 
     return {
@@ -754,10 +766,15 @@ const GeoUtils = {
 
     const pureCity = str;
     const cleanCityUpper = pureCity.toUpperCase();
+    const normCity = this.normalizeName(pureCity);
     
     // 1. Controlla nel database statico locale CITIES_DB
     if (CITIES_DB[cleanCityUpper] && CITIES_DB[cleanCityUpper].stato) {
       const dbState = CITIES_DB[cleanCityUpper].stato.toUpperCase();
+      return { city: pureCity, state: dbState, explicit: false };
+    }
+    if (CITIES_DB[normCity] && CITIES_DB[normCity].stato) {
+      const dbState = CITIES_DB[normCity].stato.toUpperCase();
       return { city: pureCity, state: dbState, explicit: false };
     }
 
@@ -986,10 +1003,13 @@ const GeoUtils = {
       }
     } catch (e) {}
 
-    // 3. Download da internet con Open-Meteo Geocoding API (Fast, Free, CORS, no-key)
+    // 3. Download da internet con Open-Meteo Geocoding API (Fast, Free, CORS, no-key con timeout 2.5s)
     try {
       const searchUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityName)}&count=10&language=it&format=json`;
-      const response = await fetch(searchUrl);
+      const fetchPromise = (typeof AbortSignal !== 'undefined' && AbortSignal.timeout)
+        ? fetch(searchUrl, { signal: AbortSignal.timeout(2500) })
+        : fetch(searchUrl);
+      const response = await fetchPromise;
       if (response.ok) {
         const data = await response.json();
         if (data && Array.isArray(data.results) && data.results.length > 0) {
@@ -1029,14 +1049,17 @@ const GeoUtils = {
         }
       }
     } catch (err) {
-      console.warn("Open-Meteo Geocoding online error:", err);
+      console.warn("Open-Meteo Geocoding online error/timeout:", err);
     }
 
-    // 4. Fallback online con OpenStreetMap Nominatim API
+    // 4. Fallback online con OpenStreetMap Nominatim API (con timeout 2.5s)
     try {
       const query = stateName ? `${cityName}, ${stateName}` : cityName;
       const nomUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
-      const nomRes = await fetch(nomUrl);
+      const nomPromise = (typeof AbortSignal !== 'undefined' && AbortSignal.timeout)
+        ? fetch(nomUrl, { signal: AbortSignal.timeout(2500) })
+        : fetch(nomUrl);
+      const nomRes = await nomPromise;
       if (nomRes.ok) {
         const nomData = await nomRes.json();
         if (Array.isArray(nomData) && nomData.length > 0) {
@@ -1068,7 +1091,7 @@ const GeoUtils = {
         }
       }
     } catch (err) {
-      console.warn("Nominatim Geocoding online error:", err);
+      console.warn("Nominatim Geocoding online error/timeout:", err);
     }
 
     // 5. Fallback locale
@@ -1462,16 +1485,16 @@ const GeoUtils = {
   NAUTICAL_NODES: {
     // --- ADRIATICO ---
     "ADR_NORTH": [45.15, 12.85],       // Alto Adriatico / Venezia / Chioggia / Trieste
-    "ADR_MID_NORTH": [44.20, 13.60],   // Ancona / Zara
-    "ADR_MID_SOUTH": [42.80, 15.20],   // Pescara / Spalato
-    "ADR_SOUTH": [41.40, 17.20],       // Bari / Dubrovnik / Kotor
+    "ADR_MID_NORTH": [44.15, 14.70],   // Ancona / Zara al largo
+    "ADR_MID_SOUTH": [43.10, 15.80],   // Pescara / Spalato al largo
+    "ADR_SOUTH": [42.10, 17.50],       // Bari / Dubrovnik / Kotor al largo
     "STRAIT_OTRANTO": [39.85, 18.85],  // Canale d'Otranto (uscita Adriatico)
 
     // --- IONIO E GRECIA OCCIDENTALE ---
-    "IONIAN_NORTH": [39.50, 19.50],    // Corfù / Igoumenitsa
-    "IONIAN_MID": [38.30, 18.00],      // Crotone / Santa Maria di Leuca
-    "IONIAN_SOUTH": [36.80, 17.50],    // Ionio meridionale / Golfo di Taranto al largo
-    "PELOPONNESE_WEST": [37.50, 21.10],// Katakolo / Olimpia / Zante
+    "IONIAN_NORTH": [39.55, 19.70],    // Corfù / Igoumenitsa al largo
+    "IONIAN_MID": [38.30, 19.80],      // Ionio / Cefalonia / Itaca
+    "IONIAN_SOUTH": [36.80, 19.50],    // Ionio meridionale
+    "PELOPONNESE_WEST": [37.65, 20.85],// Katakolo / Olimpia / Zacinto
 
     // --- STRETTO DI MESSINA & SICILIA ---
     "STRAIT_MESSINA_N": [38.30, 15.65],// Stretto di Messina Nord
@@ -1649,8 +1672,9 @@ const GeoUtils = {
     "BARI": "ADR_SOUTH",
     "BRINDISI": "ADR_SOUTH",
     "CORFU": "IONIAN_NORTH",
-    "ZACINTO": "IONIAN_MID",
-    "ZANTE": "IONIAN_MID",
+    "CORFU'": "IONIAN_NORTH",
+    "ZACINTO": "PELOPONNESE_WEST",
+    "ZANTE": "PELOPONNESE_WEST",
     "PATRASSO": "PELOPONNESE_WEST",
     "KATAKOLO": "PELOPONNESE_WEST",
     "ATENE": "AEGEAN_NORTH",
@@ -1801,8 +1825,8 @@ const GeoUtils = {
     return path.length > 1 && path[0] === startNode ? path : [];
   },
 
-  // Interpolazione curvilinea spline Catmull-Rom fluida attraverso i nodi marittimi
-  smoothNauticalWaypoints(points, tension = 0.35) {
+  // Interpolazione curvilinea spline Catmull-Rom fluida attraverso i nodi marittimi (con tensione dolce per evitare terraferma)
+  smoothNauticalWaypoints(points, tension = 0.20) {
     if (!points || points.length < 2) return points || [];
     if (points.length === 2) {
       const seg = [];
@@ -1891,8 +1915,8 @@ const GeoUtils = {
     return fullPath;
   },
 
-  // 4. MAPPA DINAMICA DI VIAGGIO (CON ROTTE CROCIERA)
-  renderTripRouteMap(containerInput, citiesNames = [], isCruise = false) {
+  // 4. MAPPA DINAMICA DI VIAGGIO (CON ROTTE CROCIERA E PIN VERDE MENTA PER AEREO / ALTRO)
+  renderTripRouteMap(containerInput, citiesNames = [], isCruise = false, tripType = '') {
     const container = typeof containerInput === "string" ? document.getElementById(containerInput) : containerInput;
     if (!container) return;
 
@@ -1928,22 +1952,27 @@ const GeoUtils = {
       return;
     }
 
+    // Regola Ufficiale: linea di rotta attiva SOLO per tipologia pura Crociera.
+    // Per Aereo, Altro e Crociera+Altro: nessuna linea, solo pin verde menta (#00FFA3).
+    const typeStr = String(tripType || '').toLowerCase().trim();
+    const isPureCruise = isCruise && (typeStr === 'crociera' || (!typeStr.includes('altro') && !typeStr.includes('aereo')));
+
     const latLngs = [];
     points.forEach(p => {
       latLngs.push([p.lat, p.lng]);
       const marker = L.marker([p.lat, p.lng], {
-        icon: isCruise ? this.createStepPinIcon(p.step) : this.createCityPinIcon(true)
+        icon: isPureCruise ? this.createStepPinIcon(p.step) : this.createCityPinIcon(false)
       }).addTo(map);
       marker.bindTooltip(`📍 ${p.step}. ${p.name}`, {
         className: "custom-map-tooltip",
         direction: "top",
         offset: [0, -10]
       });
-      marker.bindPopup(`<strong>Tappa ${p.step}: ${p.name}</strong>${isCruise ? '<br><span style="color: var(--pink);">🚢 Scalo di Rotta Crociera</span>' : ''}`);
+      marker.bindPopup(`<strong>Tappa ${p.step}: ${p.name}</strong>${isPureCruise ? '<br><span style="color: var(--pink);">🚢 Scalo di Rotta Crociera</span>' : ''}`);
     });
 
-    // Se Crociera, disegna traiettoria marittima curva tratteggiata Rosa Pastello
-    if (isCruise && points.length > 1) {
+    // Se Crociera pura, disegna traiettoria marittima curva tratteggiata Rosa Pastello
+    if (isPureCruise && points.length > 1) {
       const maritimePath = this.generateMaritimeCruiseRoute(points);
       L.polyline(maritimePath.length > 0 ? maritimePath : latLngs, {
         color: "#FF80BF",
@@ -1953,14 +1982,8 @@ const GeoUtils = {
         lineCap: "round",
         lineJoin: "round"
       }).addTo(map);
-    } else if (latLngs.length > 1) {
-      L.polyline(latLngs, {
-        color: "#00FFA3",
-        weight: 3,
-        opacity: 0.85,
-        dashArray: "6, 6"
-      }).addTo(map);
     }
+    // Per le altre tipologie (aereo, altro, crociera+altro), non viene disegnata alcuna linea di rotta come da Punto 4.
 
     if (latLngs.length > 1) {
       try {

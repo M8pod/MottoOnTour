@@ -4,9 +4,66 @@
 
 const CONFIG = {
   APP_NAME: "MOTTO ON TOUR",
-  VERSION: "1.6.1",
+  VERSION: "1.7",
   SECRET_PIN: "211221",
   API_URL: "https://script.google.com/macros/s/AKfycbxAVehkLAP3p2O0HQIhOnoC5XnhcrWE1G5Yxltwq1ozwzqiUcsiHwlq0FRcD9TPqQJD/exec",
+
+  // Compagnie e vettori base precaricati di default
+  DEFAULT_CARRIERS: [
+    "Trenitalia",
+    "Costa Crociere",
+    "MSC Crociere",
+    "Ryanair",
+    "ANA",
+    "Wizz Air",
+    "Lufthansa",
+    "Emirates",
+    "British Airways",
+    "RATP (Parigi)"
+  ],
+
+  // Normalizza e unifica i nomi delle compagnie/vettori per evitare duplicati e refusi
+  normalizeCarrierName(name) {
+    if (!name) return "";
+    const clean = String(name).trim().replace(/\s+/g, " ");
+    const lower = clean.toLowerCase();
+    
+    // Mappa delle equivalenze standard
+    const carrierAliases = {
+      "trenitalia": "Trenitalia",
+      "trenitalia spa": "Trenitalia",
+      "fs": "Trenitalia",
+      "costa": "Costa Crociere",
+      "costa crociere": "Costa Crociere",
+      "msc": "MSC Crociere",
+      "msc crociere": "MSC Crociere",
+      "ryanair": "Ryanair",
+      "ryan air": "Ryanair",
+      "ana": "ANA",
+      "all nippon airways": "ANA",
+      "wizz air": "Wizz Air",
+      "wizzair": "Wizz Air",
+      "lufthansa": "Lufthansa",
+      "emirates": "Emirates",
+      "british airways": "British Airways",
+      "ba": "British Airways",
+      "ratp": "RATP (Parigi)",
+      "ratp parigi": "RATP (Parigi)",
+      "ratp (parigi)": "RATP (Parigi)",
+      "italo": "Italo",
+      "italo treno": "Italo",
+      "easyjet": "easyJet",
+      "easy jet": "easyJet",
+      "air france": "Air France",
+      "klm": "KLM",
+      "iberia": "Iberia",
+      "vueling": "Vueling",
+      "ita airways": "ITA Airways",
+      "alitalia": "ITA Airways"
+    };
+
+    return carrierAliases[lower] || clean;
+  },
 
   // Formatta valori monetari in Euro (es. € 1.250)
   formatCurrency(val) {
@@ -185,6 +242,7 @@ const COUNTRIES_DB = {
   "POLONIA": { flag: "🇵🇱", continent: "Europa", capital: "Varsavia", lat: 52.2297, lng: 21.0122 },
   "CROAZIA": { flag: "🇭🇷", continent: "Europa", capital: "Zagabria", lat: 45.8150, lng: 15.9819 },
   "SLOVENIA": { flag: "🇸🇮", continent: "Europa", capital: "Lubiana", lat: 46.0569, lng: 14.5058 },
+  "SLOVACCHIA": { flag: "🇸🇰", continent: "Europa", capital: "Bratislava", lat: 48.1486, lng: 17.1077 },
   "MALTA": { flag: "🇲🇹", continent: "Europa", capital: "La Valletta", lat: 35.8989, lng: 14.5146 },
   "CIPRO": { flag: "🇨🇾", continent: "Europa", capital: "Nicosia", lat: 35.1856, lng: 33.3823 },
   "UNGHERIA": { flag: "🇭🇺", continent: "Europa", capital: "Budapest", lat: 47.4979, lng: 19.0402 },
@@ -192,12 +250,20 @@ const COUNTRIES_DB = {
   "ROMANIA": { flag: "🇷🇴", continent: "Europa", capital: "Bucarest", lat: 44.4268, lng: 26.1025 },
   "BULGARIA": { flag: "🇧🇬", continent: "Europa", capital: "Sofia", lat: 42.6977, lng: 23.3219 },
   "TURCHIA": { flag: "🇹🇷", continent: "Europa", capital: "Ankara", lat: 39.9334, lng: 32.8597 },
+  "MONTENEGRO": { flag: "🇲🇪", continent: "Europa", capital: "Podgorica", lat: 42.4304, lng: 19.2594 },
+  "BOSNIA ED ERZEGOVINA": { flag: "🇧🇦", continent: "Europa", capital: "Sarajevo", lat: 43.8563, lng: 18.4131 },
+  "SERBIA": { flag: "🇷🇸", continent: "Europa", capital: "Belgrado", lat: 44.7866, lng: 20.4489 },
+  "ALBANIA": { flag: "🇦🇱", continent: "Europa", capital: "Tirana", lat: 41.3275, lng: 19.8187 },
+  "MACEDONIA DEL NORD": { flag: "🇲🇰", continent: "Europa", capital: "Skopje", lat: 41.9981, lng: 21.4254 },
   "SAN MARINO": { flag: "🇸🇲", continent: "Europa", capital: "San Marino", lat: 43.9424, lng: 12.4578 },
   "VATICANO": { flag: "🇻🇦", continent: "Europa", capital: "Città del Vaticano", lat: 41.9029, lng: 12.4534 },
   "MONACO": { flag: "🇲🇨", continent: "Europa", capital: "Monaco", lat: 43.7384, lng: 7.4246 },
   "ANDORRA": { flag: "🇦🇩", continent: "Europa", capital: "Andorra la Vella", lat: 42.5063, lng: 1.5218 },
   "LIECHTENSTEIN": { flag: "🇱🇮", continent: "Europa", capital: "Vaduz", lat: 47.1410, lng: 9.5209 },
   "LUSSEMBURGO": { flag: "🇱🇺", continent: "Europa", capital: "Lussemburgo", lat: 49.6116, lng: 6.1319 },
+  "ESTONIA": { flag: "🇪🇪", continent: "Europa", capital: "Tallinn", lat: 59.4370, lng: 24.7536 },
+  "LETTONIA": { flag: "🇱🇻", continent: "Europa", capital: "Riga", lat: 56.9496, lng: 24.1052 },
+  "LITUANIA": { flag: "🇱🇹", continent: "Europa", capital: "Vilnius", lat: 54.6872, lng: 25.2797 },
   
   // Asia
   "GIAPPONE": { flag: "🇯🇵", continent: "Asia", capital: "Tokyo", lat: 35.6762, lng: 139.6503 },

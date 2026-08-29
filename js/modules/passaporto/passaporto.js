@@ -3,7 +3,7 @@
 // ==========================================================================
 
 const PassaportoModule = {
-  currentCategory: 'main', // 'main', 'geografia', 'intensita', 'storico', 'compagni', 'economia', 'citta_dettaglio'
+  currentCategory: 'main', // 'main', 'geografia', 'intensita', 'storico', 'compagni', 'economia', 'citta_dettaglio', 'galleria_ricordi', 'traguardi_esplorazioni'
   selectedCompanion: null,
   selectedCity: null,
   selectedCarrier: null,
@@ -14,6 +14,10 @@ const PassaportoModule = {
         this.renderGeografia(container);
       } else if (this.currentCategory === 'citta_dettaglio') {
         this.renderCityDrillDown(container);
+      } else if (this.currentCategory === 'galleria_ricordi') {
+        this.renderGalleriaRicordi(container);
+      } else if (this.currentCategory === 'traguardi_esplorazioni') {
+        this.renderTraguardiEsplorazioni(container);
       } else if (this.currentCategory === 'intensita') {
         this.renderIntensita(container);
       } else if (this.currentCategory === 'storico') {
@@ -30,7 +34,7 @@ const PassaportoModule = {
       container.innerHTML = `
         <div class="action-bar">
           <button class="btn btn-sm btn-pink" onclick="PassaportoModule.currentCategory='main'; App.render();">
-            ⬅️ TORNA AL PASSAPORTO
+            <span aria-hidden="true">⬅️ </span>TORNA AL PASSAPORTO
           </button>
         </div>
         <div class="empty-state" style="border-color: var(--danger); background: rgba(255,50,50,0.06); margin-top: 16px;">
@@ -38,10 +42,10 @@ const PassaportoModule = {
           <p style="color: #ccc; margin: 10px 0;">${err.message || 'Errore imprevisto'}</p>
           <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 14px;">
             <button class="btn btn-sm btn-primary" onclick="PassaportoModule.currentCategory='main'; App.render();">
-              🔄 RICARICA PASSAPORTO
+              <span aria-hidden="true">🔄 </span>RICARICA PASSAPORTO
             </button>
             <button class="btn btn-sm btn-pink" onclick="App.navigate('home')">
-              🏠 TORNA ALLA HOME
+              <span aria-hidden="true">🏠 </span>TORNA ALLA HOME
             </button>
           </div>
         </div>
@@ -69,6 +73,17 @@ const PassaportoModule = {
     let maxCost = 0;
     let robyEleCount = 0;
     let ciurmaCount = 0;
+
+    // Collezioni Souvenir ed Esperienze Strutturate
+    const starbucksItems = [];
+    const pandoraItems = [];
+    const riproduzioniItems = [];
+    const otherSouvenirs = [];
+
+    const torriItems = [];
+    const ruoteItems = [];
+    const catCaffeItems = [];
+    const otherExperiences = [];
 
     const tripsByYear = {};
     const transportCounts = {};
@@ -145,11 +160,52 @@ const PassaportoModule = {
         mostExpensiveTrip = t;
       }
 
-      // Souvenirs
-      if (t.Souvenir) {
-        const souvCount = String(t.Souvenir).split('\n').map(s => s.trim()).filter(Boolean).length;
-        totalSouvenirs += souvCount;
+      // Raccolta Souvenir
+      const dLabel = CONFIG.formatDateDisplay(t.Data_Inizio_Globale) || t.Anno_Viaggio || '';
+      if (t.Souvenir_Starbucks) {
+        String(t.Souvenir_Starbucks).split('\n').map(s => s.trim()).filter(Boolean).forEach(item => {
+          starbucksItems.push({ item, tripName: t.Nome_Viaggio, tripId: t.ID_Viaggio, date: dLabel });
+        });
       }
+      if (t.Souvenir_Pandora) {
+        String(t.Souvenir_Pandora).split('\n').map(s => s.trim()).filter(Boolean).forEach(item => {
+          pandoraItems.push({ item, tripName: t.Nome_Viaggio, tripId: t.ID_Viaggio, date: dLabel });
+        });
+      }
+      if (t.Souvenir_Riproduzioni) {
+        String(t.Souvenir_Riproduzioni).split('\n').map(s => s.trim()).filter(Boolean).forEach(item => {
+          riproduzioniItems.push({ item, tripName: t.Nome_Viaggio, tripId: t.ID_Viaggio, date: dLabel });
+        });
+      }
+      if (t.Souvenir) {
+        String(t.Souvenir).split('\n').map(s => s.trim()).filter(Boolean).forEach(item => {
+          otherSouvenirs.push({ item, tripName: t.Nome_Viaggio, tripId: t.ID_Viaggio, date: dLabel });
+        });
+      }
+
+      // Raccolta Esperienze
+      if (t.Esperienze_Torri) {
+        String(t.Esperienze_Torri).split('\n').map(s => s.trim()).filter(Boolean).forEach(item => {
+          torriItems.push({ item, tripName: t.Nome_Viaggio, tripId: t.ID_Viaggio, date: dLabel });
+        });
+      }
+      if (t.Esperienze_Ruote) {
+        String(t.Esperienze_Ruote).split('\n').map(s => s.trim()).filter(Boolean).forEach(item => {
+          ruoteItems.push({ item, tripName: t.Nome_Viaggio, tripId: t.ID_Viaggio, date: dLabel });
+        });
+      }
+      if (t.Esperienze_CatCaffe) {
+        String(t.Esperienze_CatCaffe).split('\n').map(s => s.trim()).filter(Boolean).forEach(item => {
+          catCaffeItems.push({ item, tripName: t.Nome_Viaggio, tripId: t.ID_Viaggio, date: dLabel });
+        });
+      }
+      if (t.Esperienze_Luoghi) {
+        String(t.Esperienze_Luoghi).split('\n').map(s => s.trim()).filter(Boolean).forEach(item => {
+          otherExperiences.push({ item, tripName: t.Nome_Viaggio, tripId: t.ID_Viaggio, date: dLabel });
+        });
+      }
+
+      totalSouvenirs = starbucksItems.length + pandoraItems.length + riproduzioniItems.length + otherSouvenirs.length;
 
       return {
         ...t,
@@ -181,6 +237,24 @@ const PassaportoModule = {
     const top3IntenseTrips = rankedByIntensity.slice(0, 3);
     const bottom3IntenseTrips = [...rankedByIntensity].reverse().slice(0, 3);
 
+    // Calcolo Badge Progressivi Milestone (Punto 7)
+    const computeMilestone = (count, stepSize) => {
+      const level = Math.floor(count / stepSize);
+      const nextMilestone = count >= 100 ? 100 : (level + 1) * stepSize;
+      const progressPercent = count >= 100 ? 100 : Math.min(100, Math.round(((count % stepSize) / stepSize) * 100));
+      const isSuper = count >= 100;
+      return { count, level, stepSize, nextMilestone, progressPercent, isSuper };
+    };
+
+    const badges = {
+      starbucks: computeMilestone(starbucksItems.length, 10),
+      pandora: computeMilestone(pandoraItems.length, 10),
+      riproduzioni: computeMilestone(riproduzioniItems.length, 10),
+      torri: computeMilestone(torriItems.length, 5),
+      ruote: computeMilestone(ruoteItems.length, 5),
+      catCaffe: computeMilestone(catCaffeItems.length, 4)
+    };
+
     return {
       totalTrips,
       totalSpend,
@@ -202,6 +276,15 @@ const PassaportoModule = {
       mostExpensiveTrip,
       maxCost,
       totalSouvenirs,
+      starbucksItems,
+      pandoraItems,
+      riproduzioniItems,
+      otherSouvenirs,
+      torriItems,
+      ruoteItems,
+      catCaffeItems,
+      otherExperiences,
+      badges,
       totalDaysTraveled,
       totalKilometersTraveled,
       completedEarthLaps,
@@ -273,7 +356,7 @@ const PassaportoModule = {
     container.innerHTML = `
       <div class="action-bar" style="justify-content: space-between; flex-wrap: wrap; gap: 8px;">
         <button class="btn btn-sm btn-pink" onclick="PassaportoModule.openCategory('geografia')">
-          ⬅️ TORNA A GEOGRAFIA
+          <span aria-hidden="true">⬅️ </span>TORNA A GEOGRAFIA
         </button>
       </div>
 
@@ -321,23 +404,138 @@ const PassaportoModule = {
     const stats = this.getAggregatedData();
     const hasYearBadge = stats.totalDaysTraveled >= 365;
     const yearsTraveledCount = Math.floor(stats.totalDaysTraveled / 365);
+    const b = stats.badges;
 
     container.innerHTML = `
       <div class="action-bar" style="justify-content: space-between; flex-wrap: wrap; gap: 8px;">
         <h1 id="screen-title" tabindex="-1">IL MIO PASSAPORTO</h1>
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
           <button class="btn btn-sm btn-pink" onclick="PassaportoModule.openPdfReport()">
-            📄 GENERA PDF
+            <span aria-hidden="true">📄 </span>GENERA PDF
           </button>
           <button class="btn btn-sm btn-primary" onclick="PassaportoModule.openChartModal()">
-            📊 ESPORTA GRAFICI
+            <span aria-hidden="true">📊 </span>ESPORTA GRAFICI
           </button>
         </div>
       </div>
 
       <p style="color: var(--pink-light); margin-bottom: 16px;">
-        Centro statistico, record di coppia, traguardi chilometrici e analisi dettagliata di tutte le nostre avventure nel mondo.
+        Centro statistico, record di coppia, badge milestone e analisi dettagliata di tutte le nostre avventure nel mondo.
       </p>
+
+      <!-- SEZIONE BADGE MILESTONE PROGRESSIVI (PUNTO 7) -->
+      <section class="card" style="border: 2px solid var(--mint); background: rgba(0,255,163,0.04); margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <h2 style="margin: 0; color: var(--mint); border: none;">
+            🏅 BADGE PROGRESSIVI E SUPER BADGE CENTENARI
+          </h2>
+          <span style="font-size: 0.85rem; color: #aaa;">Sblocco progressivo ogni 10/5/4 unità & Super Badge a 100+</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 14px;">
+          <!-- 1. STARBUCKS (ogni 10) -->
+          <div style="background: rgba(0,0,0,0.5); border: 1.5px solid ${b.starbucks.isSuper ? 'var(--mint)' : (b.starbucks.level > 0 ? 'var(--pink)' : 'rgba(255,255,255,0.15)')}; border-radius: 8px; padding: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: 800; color: var(--mint); font-size: 1rem;">☕ Tazzine Starbucks</span>
+              <span style="background: ${b.starbucks.isSuper ? 'var(--mint)' : 'var(--pink)'}; color: #000; font-weight: 800; font-size: 0.75rem; padding: 2px 6px; border-radius: 6px;">
+                ${b.starbucks.isSuper ? '🌟 SUPER BADGE' : `LIV. ${b.starbucks.level}`}
+              </span>
+            </div>
+            <p class="stat-value" style="font-size: 1.3rem; margin: 6px 0;">${b.starbucks.count} tazzine</p>
+            <p style="color: #ccc; font-size: 0.8rem; margin: 0 0 6px 0;">
+              ${b.starbucks.isSuper ? 'Traguardo Centenario 100+ sbloccato!' : `Prossimo badge a ${b.starbucks.nextMilestone} tazzine (${b.starbucks.count % 10}/10)`}
+            </p>
+            <div class="progress-container" style="height: 6px;">
+              <div class="progress-fill" style="width: ${b.starbucks.progressPercent}%; background: var(--mint);"></div>
+            </div>
+          </div>
+
+          <!-- 2. PANDORA (ogni 10) -->
+          <div style="background: rgba(0,0,0,0.5); border: 1.5px solid ${b.pandora.isSuper ? 'var(--mint)' : (b.pandora.level > 0 ? 'var(--pink)' : 'rgba(255,255,255,0.15)')}; border-radius: 8px; padding: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: 800; color: var(--pink); font-size: 1rem;">💎 Charm Pandora</span>
+              <span style="background: ${b.pandora.isSuper ? 'var(--mint)' : 'var(--pink)'}; color: #000; font-weight: 800; font-size: 0.75rem; padding: 2px 6px; border-radius: 6px;">
+                ${b.pandora.isSuper ? '🌟 SUPER BADGE' : `LIV. ${b.pandora.level}`}
+              </span>
+            </div>
+            <p class="stat-value" style="font-size: 1.3rem; margin: 6px 0;">${b.pandora.count} charm</p>
+            <p style="color: #ccc; font-size: 0.8rem; margin: 0 0 6px 0;">
+              ${b.pandora.isSuper ? 'Traguardo Centenario 100+ sbloccato!' : `Prossimo badge a ${b.pandora.nextMilestone} charm (${b.pandora.count % 10}/10)`}
+            </p>
+            <div class="progress-container" style="height: 6px;">
+              <div class="progress-fill" style="width: ${b.pandora.progressPercent}%; background: var(--pink);"></div>
+            </div>
+          </div>
+
+          <!-- 3. RIPRODUZIONI (ogni 10) -->
+          <div style="background: rgba(0,0,0,0.5); border: 1.5px solid ${b.riproduzioni.isSuper ? 'var(--mint)' : (b.riproduzioni.level > 0 ? 'var(--pink)' : 'rgba(255,255,255,0.15)')}; border-radius: 8px; padding: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: 800; color: var(--mint); font-size: 1rem;">🏛️ Riproduzioni Storiche</span>
+              <span style="background: ${b.riproduzioni.isSuper ? 'var(--mint)' : 'var(--pink)'}; color: #000; font-weight: 800; font-size: 0.75rem; padding: 2px 6px; border-radius: 6px;">
+                ${b.riproduzioni.isSuper ? '🌟 SUPER BADGE' : `LIV. ${b.riproduzioni.level}`}
+              </span>
+            </div>
+            <p class="stat-value" style="font-size: 1.3rem; margin: 6px 0;">${b.riproduzioni.count} pezzi</p>
+            <p style="color: #ccc; font-size: 0.8rem; margin: 0 0 6px 0;">
+              ${b.riproduzioni.isSuper ? 'Traguardo Centenario 100+ sbloccato!' : `Prossimo badge a ${b.riproduzioni.nextMilestone} pezzi (${b.riproduzioni.count % 10}/10)`}
+            </p>
+            <div class="progress-container" style="height: 6px;">
+              <div class="progress-fill" style="width: ${b.riproduzioni.progressPercent}%; background: var(--mint);"></div>
+            </div>
+          </div>
+
+          <!-- 4. TORRI (ogni 5) -->
+          <div style="background: rgba(0,0,0,0.5); border: 1.5px solid ${b.torri.isSuper ? 'var(--mint)' : (b.torri.level > 0 ? 'var(--pink)' : 'rgba(255,255,255,0.15)')}; border-radius: 8px; padding: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: 800; color: var(--pink); font-size: 1rem;">🗼 Torri Panoramiche</span>
+              <span style="background: ${b.torri.isSuper ? 'var(--mint)' : 'var(--pink)'}; color: #000; font-weight: 800; font-size: 0.75rem; padding: 2px 6px; border-radius: 6px;">
+                ${b.torri.isSuper ? '🌟 SUPER BADGE' : `LIV. ${b.torri.level}`}
+              </span>
+            </div>
+            <p class="stat-value" style="font-size: 1.3rem; margin: 6px 0;">${b.torri.count} torri</p>
+            <p style="color: #ccc; font-size: 0.8rem; margin: 0 0 6px 0;">
+              ${b.torri.isSuper ? 'Traguardo Centenario 100+ sbloccato!' : `Prossimo badge a ${b.torri.nextMilestone} torri (${b.torri.count % 5}/5)`}
+            </p>
+            <div class="progress-container" style="height: 6px;">
+              <div class="progress-fill" style="width: ${b.torri.progressPercent}%; background: var(--pink);"></div>
+            </div>
+          </div>
+
+          <!-- 5. RUOTE (ogni 5) -->
+          <div style="background: rgba(0,0,0,0.5); border: 1.5px solid ${b.ruote.isSuper ? 'var(--mint)' : (b.ruote.level > 0 ? 'var(--pink)' : 'rgba(255,255,255,0.15)')}; border-radius: 8px; padding: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: 800; color: var(--mint); font-size: 1rem;">🎡 Ruote Panoramiche</span>
+              <span style="background: ${b.ruote.isSuper ? 'var(--mint)' : 'var(--pink)'}; color: #000; font-weight: 800; font-size: 0.75rem; padding: 2px 6px; border-radius: 6px;">
+                ${b.ruote.isSuper ? '🌟 SUPER BADGE' : `LIV. ${b.ruote.level}`}
+              </span>
+            </div>
+            <p class="stat-value" style="font-size: 1.3rem; margin: 6px 0;">${b.ruote.count} ruote</p>
+            <p style="color: #ccc; font-size: 0.8rem; margin: 0 0 6px 0;">
+              ${b.ruote.isSuper ? 'Traguardo Centenario 100+ sbloccato!' : `Prossimo badge a ${b.ruote.nextMilestone} ruote (${b.ruote.count % 5}/5)`}
+            </p>
+            <div class="progress-container" style="height: 6px;">
+              <div class="progress-fill" style="width: ${b.ruote.progressPercent}%; background: var(--mint);"></div>
+            </div>
+          </div>
+
+          <!-- 6. CAT CAFFÈ (ogni 4) -->
+          <div style="background: rgba(0,0,0,0.5); border: 1.5px solid ${b.catCaffe.isSuper ? 'var(--mint)' : (b.catCaffe.level > 0 ? 'var(--pink)' : 'rgba(255,255,255,0.15)')}; border-radius: 8px; padding: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: 800; color: var(--pink); font-size: 1rem;">🐱 Cat Caffè</span>
+              <span style="background: ${b.catCaffe.isSuper ? 'var(--mint)' : 'var(--pink)'}; color: #000; font-weight: 800; font-size: 0.75rem; padding: 2px 6px; border-radius: 6px;">
+                ${b.catCaffe.isSuper ? '🌟 SUPER BADGE' : `LIV. ${b.catCaffe.level}`}
+              </span>
+            </div>
+            <p class="stat-value" style="font-size: 1.3rem; margin: 6px 0;">${b.catCaffe.count} cat caffè</p>
+            <p style="color: #ccc; font-size: 0.8rem; margin: 0 0 6px 0;">
+              ${b.catCaffe.isSuper ? 'Traguardo Centenario 100+ sbloccato!' : `Prossimo badge a ${b.catCaffe.nextMilestone} cat caffè (${b.catCaffe.count % 4}/4)`}
+            </p>
+            <div class="progress-container" style="height: 6px;">
+              <div class="progress-fill" style="width: ${b.catCaffe.progressPercent}%; background: var(--pink);"></div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <!-- 1. SEZIONE TRAGUARDI: GIORNI VIAGGIATI (BADGE 365) & GIRI DELLA TERRA / LUNA -->
       <section class="card" style="border: 2px solid ${hasYearBadge ? 'var(--mint)' : 'var(--pink)'}; background: ${hasYearBadge ? 'linear-gradient(135deg, rgba(255,128,191,0.12), rgba(0,255,163,0.14))' : 'rgba(255,128,191,0.06)'}; margin-bottom: 20px;">
@@ -397,19 +595,39 @@ const PassaportoModule = {
         </div>
       </section>
 
-      <!-- 5 MACRO AREE DI ANALISI -->
+      <!-- 7 MACRO AREE DI ANALISI E GALLERIE -->
       <div style="display: grid; grid-template-columns: 1fr; gap: 16px;">
         <!-- 1. GEOGRAFIA E RECORD -->
         <button type="button" class="card card-pink card-interactive card-btn" onclick="PassaportoModule.openCategory('geografia')" aria-label="Geografia e record. ${stats.visitedStatesCount} stati visitati, ${stats.totalCitiesCount} città visitate, ${stats.worldPercentage}% del mondo. Apri dettagli geografici.">
           <div aria-hidden="true">
             <h2 style="color: var(--pink); margin: 0; border: none;">🌍 GEOGRAFIA E RECORD</h2>
             <p style="color: #ccc; margin-top: 6px;">
-              ${stats.visitedStatesCount} Stati esplorati | ${stats.totalCitiesCount} Città visitate | ${stats.worldPercentage}% del mondo | Record Polari
+              ${stats.visitedStatesCount} Stati esplorati | ${stats.totalCitiesCount} Città visitate (Mondo & Italia) | ${stats.worldPercentage}% del mondo | Record Polari
             </p>
           </div>
         </button>
 
-        <!-- 2. CLASSIFICA INTENSITÀ VIAGGI (BOLLINI 1-10) -->
+        <!-- 2. GALLERIA DEI RICORDI (SOUVENIR) -->
+        <button type="button" class="card card-mint card-interactive card-btn" onclick="PassaportoModule.openCategory('galleria_ricordi')" aria-label="La mia galleria dei ricordi. ${stats.totalSouvenirs} souvenir collezionati: Starbucks, Pandora, Modellini e ricordi. Apri galleria ricordi.">
+          <div aria-hidden="true">
+            <h2 style="color: var(--mint); margin: 0; border: none;">🛍️ LA MIA GALLERIA DEI RICORDI</h2>
+            <p style="color: #ccc; margin-top: 6px;">
+              ☕ ${stats.starbucksItems.length} Tazzine Starbucks | 💎 ${stats.pandoraItems.length} Charm Pandora | 🏛️ ${stats.riproduzioniItems.length} Modellini storici | 🛍️ ${stats.otherSouvenirs.length} Altri Souvenir
+            </p>
+          </div>
+        </button>
+
+        <!-- 3. TRAGUARDI ED ESPLORAZIONI (ESPERIENZE) -->
+        <button type="button" class="card card-pink card-interactive card-btn" onclick="PassaportoModule.openCategory('traguardi_esplorazioni')" aria-label="Traguardi ed esplorazioni. Torri panoramiche, ruote panoramiche, cat caffè e attrazioni nel mondo. Apri traguardi ed esplorazioni.">
+          <div aria-hidden="true">
+            <h2 style="color: var(--pink); margin: 0; border: none;">✨ TRAGUARDI ED ESPLORAZIONI</h2>
+            <p style="color: #ccc; margin-top: 6px;">
+              🗼 ${stats.torriItems.length} Torri Panoramiche | 🎡 ${stats.ruoteItems.length} Ruote Panoramiche | 🐱 ${stats.catCaffeItems.length} Cat Caffè | 🌟 Altre attrazioni
+            </p>
+          </div>
+        </button>
+
+        <!-- 4. CLASSIFICA INTENSITÀ VIAGGI (BOLLINI 1-10) -->
         <button type="button" class="card card-mint card-interactive card-btn" onclick="PassaportoModule.openCategory('intensita')" aria-label="Classifica intensità viaggi con bollini da 1 a 10. Top 3 viaggi e indice esperienziale. Apri classifica intensità.">
           <div aria-hidden="true">
             <h2 style="color: var(--mint); margin: 0; border: none;">🏆 CLASSIFICA INTENSITÀ VIAGGI (BOLLINI 1-10)</h2>
@@ -419,7 +637,7 @@ const PassaportoModule = {
           </div>
         </button>
 
-        <!-- 3. STORICO E LOGISTICA -->
+        <!-- 5. STORICO E LOGISTICA -->
         <button type="button" class="card card-pink card-interactive card-btn" onclick="PassaportoModule.openCategory('storico')" aria-label="Storico e logistica. ${stats.totalTrips} viaggi completati, frequenza annuale e mezzi usati. Apri dettagli storico.">
           <div aria-hidden="true">
             <h2 style="color: var(--pink); margin: 0; border: none;">📅 STORICO E LOGISTICA</h2>
@@ -429,7 +647,7 @@ const PassaportoModule = {
           </div>
         </button>
 
-        <!-- 4. COMPAGNI DI VIAGGIO -->
+        <!-- 6. COMPAGNI DI VIAGGIO -->
         <button type="button" class="card card-mint card-interactive card-btn" onclick="PassaportoModule.openCategory('compagni')" aria-label="Compagni di viaggio. Roby e Ele: ${stats.robyEleCount}, con la ciurma: ${stats.ciurmaCount}. Apri dettagli compagni.">
           <div aria-hidden="true">
             <h2 style="color: var(--mint); margin: 0; border: none;">👥 COMPAGNI DI VIAGGIO</h2>
@@ -439,7 +657,7 @@ const PassaportoModule = {
           </div>
         </button>
 
-        <!-- 5. ECONOMIA E BUDGET -->
+        <!-- 7. ECONOMIA E BUDGET -->
         <button type="button" class="card card-pink card-interactive card-btn" onclick="PassaportoModule.openCategory('economia')" aria-label="Economia e budget. Spesa totale registrata ${CONFIG.formatCurrency(stats.totalSpend)}. Apri dettagli economici.">
           <div aria-hidden="true">
             <h2 style="color: var(--pink); margin: 0; border: none;">💰 ECONOMIA E BUDGET</h2>
@@ -448,6 +666,9 @@ const PassaportoModule = {
             </p>
           </div>
         </button>
+      </div>
+    `;
+  },
       </div>
     `;
   },
@@ -461,10 +682,10 @@ const PassaportoModule = {
     container.innerHTML = `
       <div class="action-bar" style="justify-content: space-between;">
         <button class="btn btn-sm btn-pink" onclick="PassaportoModule.openCategory('main')">
-          ⬅️ TORNA AL PASSAPORTO
+          <span aria-hidden="true">⬅️ </span>TORNA AL PASSAPORTO
         </button>
         <button class="btn btn-sm btn-primary" onclick="PassaportoModule.openPdfReport()">
-          📄 GENERA PDF
+          <span aria-hidden="true">📄 </span>GENERA PDF
         </button>
       </div>
 
@@ -569,6 +790,214 @@ const PassaportoModule = {
     `;
   },
 
+  // LA MIA GALLERIA DEI RICORDI (Punto 6)
+  renderGalleriaRicordi(container) {
+    const stats = this.getAggregatedData();
+
+    container.innerHTML = `
+      <div class="action-bar" style="justify-content: space-between;">
+        <button class="btn btn-sm btn-pink" onclick="PassaportoModule.openCategory('main')">
+          <span aria-hidden="true">⬅️ </span>TORNA AL PASSAPORTO
+        </button>
+        <button class="btn btn-sm btn-primary" onclick="PassaportoModule.openPdfReport()">
+          <span aria-hidden="true">📄 </span>GENERA PDF
+        </button>
+      </div>
+
+      <h1 id="screen-title" tabindex="-1">LA MIA GALLERIA DEI RICORDI</h1>
+      <p style="color: var(--pink-light); margin-bottom: 16px;">
+        Catalogo e archivio itemizzato di tutti i souvenir, charm, modellini e ricordi raccolti nel mondo.
+      </p>
+
+      <!-- 1. TAZZINE STARBUCKS -->
+      <section class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h2 style="margin: 0; color: var(--mint); border: none;">☕ TAZZINE STARBUCKS (${stats.starbucksItems.length})</h2>
+          <span style="background: var(--mint); color: #000; font-weight: 800; font-size: 0.8rem; padding: 2px 8px; border-radius: 8px;">
+            ${stats.badges.starbucks.isSuper ? '🌟 SUPER BADGE' : `LIV. ${stats.badges.starbucks.level}`}
+          </span>
+        </div>
+        ${stats.starbucksItems.length > 0 ? `
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-top: 12px;">
+            ${stats.starbucksItems.map(it => `
+              <div style="background: rgba(0,255,163,0.06); border: 1px solid var(--mint); border-radius: 8px; padding: 10px;">
+                <p style="font-weight: 700; color: #FFFFFF; margin: 0 0 4px 0;">☕ ${it.item}</p>
+                <p style="color: var(--pink-light); font-size: 0.8rem; margin: 0;">
+                  ✈️ <a href="javascript:void(0)" onclick="DiarioModule.openTripDetails('${it.tripId}', 'passaporto')" style="color: var(--pink-light); text-decoration: underline;">${it.tripName}</a> (${it.date})
+                </p>
+              </div>
+            `).join('')}
+          </div>
+        ` : `<p style="color: var(--text-muted); margin-top: 10px;">Nessuna tazzina Starbucks registrata nei viaggi.</p>`}
+      </section>
+
+      <!-- 2. CHARM PANDORA -->
+      <section class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h2 style="margin: 0; color: var(--pink); border: none;">💎 CHARM PANDORA (${stats.pandoraItems.length})</h2>
+          <span style="background: var(--pink); color: #000; font-weight: 800; font-size: 0.8rem; padding: 2px 8px; border-radius: 8px;">
+            ${stats.badges.pandora.isSuper ? '🌟 SUPER BADGE' : `LIV. ${stats.badges.pandora.level}`}
+          </span>
+        </div>
+        ${stats.pandoraItems.length > 0 ? `
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-top: 12px;">
+            ${stats.pandoraItems.map(it => `
+              <div style="background: rgba(255,128,191,0.06); border: 1px solid var(--pink); border-radius: 8px; padding: 10px;">
+                <p style="font-weight: 700; color: #FFFFFF; margin: 0 0 4px 0;">💎 ${it.item}</p>
+                <p style="color: var(--mint); font-size: 0.8rem; margin: 0;">
+                  ✈️ <a href="javascript:void(0)" onclick="DiarioModule.openTripDetails('${it.tripId}', 'passaporto')" style="color: var(--mint); text-decoration: underline;">${it.tripName}</a> (${it.date})
+                </p>
+              </div>
+            `).join('')}
+          </div>
+        ` : `<p style="color: var(--text-muted); margin-top: 10px;">Nessun charm Pandora registrato nei viaggi.</p>`}
+      </section>
+
+      <!-- 3. RIPRODUZIONI E MODELLINI STORICI -->
+      <section class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h2 style="margin: 0; color: var(--mint); border: none;">🏛️ RIPRODUZIONI E MODELLINI STORICI (${stats.riproduzioniItems.length})</h2>
+          <span style="background: var(--mint); color: #000; font-weight: 800; font-size: 0.8rem; padding: 2px 8px; border-radius: 8px;">
+            ${stats.badges.riproduzioni.isSuper ? '🌟 SUPER BADGE' : `LIV. ${stats.badges.riproduzioni.level}`}
+          </span>
+        </div>
+        ${stats.riproduzioniItems.length > 0 ? `
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-top: 12px;">
+            ${stats.riproduzioniItems.map(it => `
+              <div style="background: rgba(0,255,163,0.06); border: 1px solid var(--mint); border-radius: 8px; padding: 10px;">
+                <p style="font-weight: 700; color: #FFFFFF; margin: 0 0 4px 0;">🏛️ ${it.item}</p>
+                <p style="color: var(--pink-light); font-size: 0.8rem; margin: 0;">
+                  ✈️ <a href="javascript:void(0)" onclick="DiarioModule.openTripDetails('${it.tripId}', 'passaporto')" style="color: var(--pink-light); text-decoration: underline;">${it.tripName}</a> (${it.date})
+                </p>
+              </div>
+            `).join('')}
+          </div>
+        ` : `<p style="color: var(--text-muted); margin-top: 10px;">Nessuna riproduzione storica registrata nei viaggi.</p>`}
+      </section>
+
+      <!-- 4. ALTRI SOUVENIR -->
+      <section class="card">
+        <h2>🛍️ ALTRI SOUVENIR E MEMORIE (${stats.otherSouvenirs.length})</h2>
+        ${stats.otherSouvenirs.length > 0 ? `
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-top: 12px;">
+            ${stats.otherSouvenirs.map(it => `
+              <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 10px;">
+                <p style="font-weight: 700; color: #FFFFFF; margin: 0 0 4px 0;">🛍️ ${it.item}</p>
+                <p style="color: #aaa; font-size: 0.8rem; margin: 0;">
+                  ✈️ <a href="javascript:void(0)" onclick="DiarioModule.openTripDetails('${it.tripId}', 'passaporto')" style="color: var(--pink-light); text-decoration: underline;">${it.tripName}</a> (${it.date})
+                </p>
+              </div>
+            `).join('')}
+          </div>
+        ` : `<p style="color: var(--text-muted); margin-top: 10px;">Nessun altro souvenir registrato.</p>`}
+      </section>
+    `;
+  },
+
+  // TRAGUARDI ED ESPLORAZIONI (Punto 6)
+  renderTraguardiEsplorazioni(container) {
+    const stats = this.getAggregatedData();
+
+    container.innerHTML = `
+      <div class="action-bar" style="justify-content: space-between;">
+        <button class="btn btn-sm btn-pink" onclick="PassaportoModule.openCategory('main')">
+          <span aria-hidden="true">⬅️ </span>TORNA AL PASSAPORTO
+        </button>
+        <button class="btn btn-sm btn-primary" onclick="PassaportoModule.openPdfReport()">
+          <span aria-hidden="true">📄 </span>GENERA PDF
+        </button>
+      </div>
+
+      <h1 id="screen-title" tabindex="-1">TRAGUARDI ED ESPLORAZIONI</h1>
+      <p style="color: var(--pink-light); margin-bottom: 16px;">
+        Panoramica delle vette, delle grandi ruote panoramiche, dei cat caffè e delle attrazioni esperienziali nel mondo.
+      </p>
+
+      <!-- 1. TORRI PANORAMICHE -->
+      <section class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h2 style="margin: 0; color: var(--pink); border: none;">🗼 TORRI PANORAMICHE (${stats.torriItems.length})</h2>
+          <span style="background: var(--pink); color: #000; font-weight: 800; font-size: 0.8rem; padding: 2px 8px; border-radius: 8px;">
+            ${stats.badges.torri.isSuper ? '🌟 SUPER BADGE' : `LIV. ${stats.badges.torri.level}`}
+          </span>
+        </div>
+        ${stats.torriItems.length > 0 ? `
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-top: 12px;">
+            ${stats.torriItems.map(it => `
+              <div style="background: rgba(255,128,191,0.06); border: 1px solid var(--pink); border-radius: 8px; padding: 10px;">
+                <p style="font-weight: 700; color: #FFFFFF; margin: 0 0 4px 0;">🗼 ${it.item}</p>
+                <p style="color: var(--mint); font-size: 0.8rem; margin: 0;">
+                  ✈️ <a href="javascript:void(0)" onclick="DiarioModule.openTripDetails('${it.tripId}', 'passaporto')" style="color: var(--mint); text-decoration: underline;">${it.tripName}</a> (${it.date})
+                </p>
+              </div>
+            `).join('')}
+          </div>
+        ` : `<p style="color: var(--text-muted); margin-top: 10px;">Nessuna torre panoramica registrata nei viaggi.</p>`}
+      </section>
+
+      <!-- 2. RUOTE PANORAMICHE -->
+      <section class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h2 style="margin: 0; color: var(--mint); border: none;">🎡 RUOTE PANORAMICHE (${stats.ruoteItems.length})</h2>
+          <span style="background: var(--mint); color: #000; font-weight: 800; font-size: 0.8rem; padding: 2px 8px; border-radius: 8px;">
+            ${stats.badges.ruote.isSuper ? '🌟 SUPER BADGE' : `LIV. ${stats.badges.ruote.level}`}
+          </span>
+        </div>
+        ${stats.ruoteItems.length > 0 ? `
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-top: 12px;">
+            ${stats.ruoteItems.map(it => `
+              <div style="background: rgba(0,255,163,0.06); border: 1px solid var(--mint); border-radius: 8px; padding: 10px;">
+                <p style="font-weight: 700; color: #FFFFFF; margin: 0 0 4px 0;">🎡 ${it.item}</p>
+                <p style="color: var(--pink-light); font-size: 0.8rem; margin: 0;">
+                  ✈️ <a href="javascript:void(0)" onclick="DiarioModule.openTripDetails('${it.tripId}', 'passaporto')" style="color: var(--pink-light); text-decoration: underline;">${it.tripName}</a> (${it.date})
+                </p>
+              </div>
+            `).join('')}
+          </div>
+        ` : `<p style="color: var(--text-muted); margin-top: 10px;">Nessuna ruota panoramica registrata nei viaggi.</p>`}
+      </section>
+
+      <!-- 3. CAT CAFFÈ -->
+      <section class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h2 style="margin: 0; color: var(--pink); border: none;">🐱 CAT CAFFÈ (${stats.catCaffeItems.length})</h2>
+          <span style="background: var(--pink); color: #000; font-weight: 800; font-size: 0.8rem; padding: 2px 8px; border-radius: 8px;">
+            ${stats.badges.catCaffe.isSuper ? '🌟 SUPER BADGE' : `LIV. ${stats.badges.catCaffe.level}`}
+          </span>
+        </div>
+        ${stats.catCaffeItems.length > 0 ? `
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-top: 12px;">
+            ${stats.catCaffeItems.map(it => `
+              <div style="background: rgba(255,128,191,0.06); border: 1px solid var(--pink); border-radius: 8px; padding: 10px;">
+                <p style="font-weight: 700; color: #FFFFFF; margin: 0 0 4px 0;">🐱 ${it.item}</p>
+                <p style="color: var(--mint); font-size: 0.8rem; margin: 0;">
+                  ✈️ <a href="javascript:void(0)" onclick="DiarioModule.openTripDetails('${it.tripId}', 'passaporto')" style="color: var(--mint); text-decoration: underline;">${it.tripName}</a> (${it.date})
+                </p>
+              </div>
+            `).join('')}
+          </div>
+        ` : `<p style="color: var(--text-muted); margin-top: 10px;">Nessun cat caffè registrato nei viaggi.</p>`}
+      </section>
+
+      <!-- 4. ALTRE ESPERIENZE E ATTRAZIONI -->
+      <section class="card">
+        <h2>✨ ALTRE ESPERIENZE E ATTRAZIONI (${stats.otherExperiences.length})</h2>
+        ${stats.otherExperiences.length > 0 ? `
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-top: 12px;">
+            ${stats.otherExperiences.map(it => `
+              <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 10px;">
+                <p style="font-weight: 700; color: #FFFFFF; margin: 0 0 4px 0;">✨ ${it.item}</p>
+                <p style="color: #aaa; font-size: 0.8rem; margin: 0;">
+                  ✈️ <a href="javascript:void(0)" onclick="DiarioModule.openTripDetails('${it.tripId}', 'passaporto')" style="color: var(--pink-light); text-decoration: underline;">${it.tripName}</a> (${it.date})
+                </p>
+              </div>
+            `).join('')}
+          </div>
+        ` : `<p style="color: var(--text-muted); margin-top: 10px;">Nessun'altra attrazione registrata.</p>`}
+      </section>
+    `;
+  },
+
   renderGeografia(container) {
     const stats = this.getAggregatedData();
     const coords = API.data[CONFIG.SHEETS.COORDINATE] || [];
@@ -582,13 +1011,35 @@ const PassaportoModule = {
       continentGroups[cont].push({ state: st, flag: GeoUtils.getFlag(st) });
     });
 
+    // Costruzione elenco città unificate
+    const cityList = [];
+    stats.visitedCitiesMap.forEach((tripsArr, cityName) => {
+      const cityCoord = coords.find(co => co && co.Citta && co.Citta.toUpperCase() === cityName.toUpperCase()) || {};
+      const stateName = (cityCoord.Stato || (stats.cityStateMap && stats.cityStateMap.get(cityName)) || 'ITALIA').toUpperCase();
+      const flag = GeoUtils.getFlag(stateName);
+      cityList.push({
+        name: cityName,
+        state: stateName,
+        flag,
+        tripsCount: tripsArr.length
+      });
+    });
+
+    // Separazione rigorosa: Città nel Mondo (esclusa Italia) e Città in Italia (Punto 5)
+    const worldCities = cityList.filter(c => c.state !== 'ITALIA');
+    const italyCities = cityList.filter(c => c.state === 'ITALIA');
+
+    // Ordinamento alfabetico A-Z conforme alla lingua italiana (Intl.Collator)
+    worldCities.sort((a, b) => a.name.localeCompare(b.name, 'it', { sensitivity: 'base' }));
+    italyCities.sort((a, b) => a.name.localeCompare(b.name, 'it', { sensitivity: 'base' }));
+
     container.innerHTML = `
       <div class="action-bar" style="justify-content: space-between;">
         <button class="btn btn-sm btn-pink" onclick="PassaportoModule.openCategory('main')">
-          ⬅️ TORNA AL PASSAPORTO
+          <span aria-hidden="true">⬅️ </span>TORNA AL PASSAPORTO
         </button>
         <button class="btn btn-sm btn-primary" onclick="PassaportoModule.openPdfReport()">
-          📄 GENERA PDF
+          <span aria-hidden="true">📄 </span>GENERA PDF
         </button>
       </div>
 
@@ -632,14 +1083,8 @@ const PassaportoModule = {
         <h2>RECORD GEOGRAFICI (RIFERIMENTO VENEZIA & POLI)</h2>
         <div class="table-responsive">
           <table class="table-closed">
-            <thead>
-              <tr>
-                <th scope="col" style="width: 40%;">PARAMETRO</th>
-                <th scope="col">LOCALITÀ / VALORE</th>
-              </tr>
-            </thead>
             <tbody>
-              <tr><th scope="row">CITTÀ PIÙ A NORD</th><td>${geo.mostNorth ? `📍 ${geo.mostNorth.Citta} (${geo.mostNorth.Stato}) [${geo.mostNorth.Latitudine}°]` : 'IN ATTESA DEL PRIMO VIAGGIO'}</td></tr>
+              <tr><th scope="row" style="width: 40%;">CITTÀ PIÙ A NORD</th><td>${geo.mostNorth ? `📍 ${geo.mostNorth.Citta} (${geo.mostNorth.Stato}) [${geo.mostNorth.Latitudine}°]` : 'IN ATTESA DEL PRIMO VIAGGIO'}</td></tr>
               <tr><th scope="row">CITTÀ PIÙ A SUD</th><td>${geo.mostSouth ? `📍 ${geo.mostSouth.Citta} (${geo.mostSouth.Stato}) [${geo.mostSouth.Latitudine}°]` : 'IN ATTESA DEL PRIMO VIAGGIO'}</td></tr>
               <tr><th scope="row">CITTÀ PIÙ A EST</th><td>${geo.mostEast ? `📍 ${geo.mostEast.Citta} (${geo.mostEast.Stato}) [${geo.mostEast.Longitudine}°]` : 'IN ATTESA DEL PRIMO VIAGGIO'}</td></tr>
               <tr><th scope="row">CITTÀ PIÙ A OVEST</th><td>${geo.mostWest ? `📍 ${geo.mostWest.Citta} (${geo.mostWest.Stato}) [${geo.mostWest.Longitudine}°]` : 'IN ATTESA DEL PRIMO VIAGGIO'}</td></tr>
@@ -652,23 +1097,35 @@ const PassaportoModule = {
         </div>
       </section>
 
-      <!-- 4. LISTA CITTÀ VISITATE (Punto 2: Flag + Nome pulito senza 'Città di') -->
+      <!-- 4. LISTA CITTÀ: SUDDIVISIONE MONDO (ESCLUSA ITALIA) & ITALIA (Punto 5) -->
       <section class="card">
-        <h2>TUTTE LE CITTÀ VISITATE NEL MONDO (${stats.totalCitiesCount})</h2>
+        <h2>CITTÀ NEL MONDO (ESCLUSA ITALIA) - [${worldCities.length}]</h2>
         <p style="color: #ccc; font-size: 0.9rem; margin-top: 4px; margin-bottom: 12px;">
-          Tocca una città per visualizzare tutti i relativi viaggi in ordine cronologico.
+          Tocca una città internazionale per visualizzare tutti i relativi viaggi in ordine cronologico.
         </p>
-        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-          ${Array.from(stats.visitedCitiesMap.keys()).sort().map(c => {
-            const cityCoord = coords.find(co => co && co.Citta && co.Citta.toUpperCase() === c.toUpperCase()) || {};
-            const flag = GeoUtils.getFlag(cityCoord.Stato || (stats.cityStateMap && stats.cityStateMap.get(c)) || 'Italia');
-            return `
-              <button type="button" class="btn btn-sm btn-pink" data-city="${encodeURIComponent(c)}" onclick="PassaportoModule.openCityDrillDown(decodeURIComponent(this.getAttribute('data-city')))" aria-label="${c} ${flag}. Tocca due volte per aprire l'elenco dei viaggi correlati.">
-                ${flag} ${c}
+        ${worldCities.length > 0 ? `
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px;">
+            ${worldCities.map(c => `
+              <button type="button" class="btn btn-sm btn-pink" data-city="${encodeURIComponent(c.name)}" onclick="PassaportoModule.openCityDrillDown(decodeURIComponent(this.getAttribute('data-city')))" aria-label="${c.name} ${c.flag}. Tocca due volte per aprire i viaggi correlati.">
+                ${c.flag} ${c.name}
               </button>
-            `;
-          }).join('')}
-        </div>
+            `).join('')}
+          </div>
+        ` : `<p style="color: var(--text-muted); margin-bottom: 20px;">Nessuna città estera registrata finora.</p>`}
+
+        <h2 style="border-top: 1px solid rgba(255,255,255,0.15); padding-top: 16px;">CITTÀ IN ITALIA - [${italyCities.length}]</h2>
+        <p style="color: #ccc; font-size: 0.9rem; margin-top: 4px; margin-bottom: 12px;">
+          Tocca una città italiana per visualizzare tutti i relativi viaggi in ordine cronologico.
+        </p>
+        ${italyCities.length > 0 ? `
+          <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+            ${italyCities.map(c => `
+              <button type="button" class="btn btn-sm btn-mint" data-city="${encodeURIComponent(c.name)}" onclick="PassaportoModule.openCityDrillDown(decodeURIComponent(this.getAttribute('data-city')))" aria-label="${c.name} Italia. Tocca due volte per aprire i viaggi correlati.">
+                🇮🇹 ${c.name}
+              </button>
+            `).join('')}
+          </div>
+        ` : `<p style="color: var(--text-muted);">Nessuna città italiana registrata finora.</p>`}
       </section>
     `;
   },
