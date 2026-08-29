@@ -669,9 +669,6 @@ const PassaportoModule = {
       </div>
     `;
   },
-      </div>
-    `;
-  },
 
   renderIntensita(container) {
     const stats = this.getAggregatedData();
@@ -1136,10 +1133,10 @@ const PassaportoModule = {
     container.innerHTML = `
       <div class="action-bar" style="justify-content: space-between;">
         <button class="btn btn-sm btn-pink" onclick="PassaportoModule.openCategory('main')">
-          ⬅️ TORNA AL PASSAPORTO
+          <span aria-hidden="true">⬅️ </span>TORNA AL PASSAPORTO
         </button>
         <button class="btn btn-sm btn-primary" onclick="PassaportoModule.openPdfReport()">
-          📄 GENERA PDF
+          <span aria-hidden="true">📄 </span>GENERA PDF
         </button>
       </div>
 
@@ -1226,10 +1223,10 @@ const PassaportoModule = {
     container.innerHTML = `
       <div class="action-bar" style="justify-content: space-between;">
         <button class="btn btn-sm btn-pink" onclick="PassaportoModule.openCategory('main')">
-          ⬅️ TORNA AL PASSAPORTO
+          <span aria-hidden="true">⬅️ </span>TORNA AL PASSAPORTO
         </button>
         <button class="btn btn-sm btn-primary" onclick="PassaportoModule.openPdfReport()">
-          📄 GENERA PDF
+          <span aria-hidden="true">📄 </span>GENERA PDF
         </button>
       </div>
 
@@ -1303,10 +1300,10 @@ const PassaportoModule = {
     container.innerHTML = `
       <div class="action-bar" style="justify-content: space-between;">
         <button class="btn btn-sm btn-pink" onclick="PassaportoModule.openCategory('main')">
-          ⬅️ TORNA AL PASSAPORTO
+          <span aria-hidden="true">⬅️ </span>TORNA AL PASSAPORTO
         </button>
         <button class="btn btn-sm btn-primary" onclick="PassaportoModule.openPdfReport()">
-          📄 GENERA PDF
+          <span aria-hidden="true">📄 </span>GENERA PDF
         </button>
       </div>
 
