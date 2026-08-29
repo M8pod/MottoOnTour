@@ -67,7 +67,7 @@ const DiarioModule = {
                     const badgeHtml = GeoUtils.getIntensityBadgeHtml(t);
                     const intensityAria = GeoUtils.getIntensityAriaLabel(t);
                     return `
-                      <button type="button" class="card card-mint card-interactive card-btn" onclick="DiarioModule.openTripDetails('${t.ID_Viaggio}', 'diario')" aria-label="Scheda viaggio: ${t.Nome_Viaggio}. ${dateText}. ${intensityAria}. ${t.Stati ? `Stati: ${t.Stati.replace(/\n/g, ', ')}.` : ''} Tocca due volte per aprire i dettagli del viaggio.">
+                      <button type="button" class="card card-mint card-interactive card-btn" onclick="DiarioModule.openTripDetails('${t.ID_Viaggio}', 'diario')" aria-label="${t.Nome_Viaggio}. ${dateText}. ${intensityAria}. ${t.Stati ? `Stati: ${t.Stati.replace(/\n/g, ', ')}.` : ''} Tocca due volte per aprire i dettagli del viaggio.">
                         <div aria-hidden="true">
                           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
                             <h3 style="color: var(--mint); margin: 0;">${t.Nome_Viaggio}</h3>
@@ -102,6 +102,9 @@ const DiarioModule = {
   openTripDetails(tripId, previousModule = 'diario') {
     this.activeTripId = tripId;
     this.previousModule = previousModule;
+    if (previousModule === 'passaporto' && typeof PassaportoModule !== 'undefined') {
+      this.previousPassaportoCategory = PassaportoModule.currentCategory || 'main';
+    }
     this.currentView = 'detail';
     App.currentModule = 'diario';
     App.render();
@@ -169,7 +172,7 @@ const DiarioModule = {
             const badgeHtml = GeoUtils.getIntensityBadgeHtml(t);
             const intensityAria = GeoUtils.getIntensityAriaLabel(t);
             return `
-              <button type="button" class="card card-mint card-interactive card-btn" onclick="DiarioModule.openTripDetails('${t.ID_Viaggio}', 'diario')" aria-label="Scheda viaggio: ${t.Nome_Viaggio}. ${dateText}. ${intensityAria}. ${totalBudget > 0 ? `Spesa: ${totalBudget} Euro.` : ''} Tocca due volte per aprire i dettagli del viaggio.">
+              <button type="button" class="card card-mint card-interactive card-btn" onclick="DiarioModule.openTripDetails('${t.ID_Viaggio}', 'diario')" aria-label="${t.Nome_Viaggio}. ${dateText}. ${intensityAria}. ${totalBudget > 0 ? `Spesa: ${totalBudget} Euro.` : ''} Tocca due volte per aprire i dettagli del viaggio.">
                 <div aria-hidden="true">
                   <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
                     <h2 style="color: var(--mint); margin: 0; border: none;">${t.Nome_Viaggio}</h2>
@@ -227,7 +230,7 @@ const DiarioModule = {
     const badgeLarge = GeoUtils.getIntensityBadgeHtml(trip, true);
 
     const backButtonHtml = this.previousModule === 'passaporto'
-      ? `<button class="btn btn-sm btn-pink" onclick="PassaportoModule.openCategory('geografia'); App.navigate('passaporto');"><span aria-hidden="true">⬅️ </span>TORNA A GEOGRAFIA</button>`
+      ? `<button class="btn btn-sm btn-pink" onclick="PassaportoModule.openCategory('${this.previousPassaportoCategory || 'main'}'); App.navigate('passaporto');"><span aria-hidden="true">⬅️ </span>TORNA AL PASSAPORTO</button>`
       : (this.previousModule === 'home'
         ? `<button class="btn btn-sm btn-pink" onclick="App.navigate('home');"><span aria-hidden="true">⬅️ </span>TORNA ALLA HOME</button>`
         : `<button class="btn btn-sm btn-pink" onclick="DiarioModule.currentView='home'; App.render();"><span aria-hidden="true">⬅️ </span>INDIETRO</button>`);
@@ -827,16 +830,40 @@ const DiarioModule = {
         Compagni_Viaggio: document.getElementById('dia-compagni').value.trim(),
         
         // Nuovi campi strutturati Souvenir
-        Souvenir_Starbucks: document.getElementById('dia-souv-starbucks') ? document.getElementById('dia-souv-starbucks').value.trim() : "",
-        Souvenir_Pandora: document.getElementById('dia-souv-pandora') ? document.getElementById('dia-souv-pandora').value.trim() : "",
-        Souvenir_Riproduzioni: document.getElementById('dia-souv-riproduzioni') ? document.getElementById('dia-souv-riproduzioni').value.trim() : "",
-        Souvenir: document.getElementById('dia-souvenir').value.trim(),
+        Souvenir_Starbucks: (() => {
+          const chk = document.getElementById('chk-souv-starbucks');
+          const val = document.getElementById('dia-souv-starbucks') ? document.getElementById('dia-souv-starbucks').value.trim() : '';
+          return (chk && chk.checked) ? (val || 'Tazzina Starbucks') : '';
+        })(),
+        Souvenir_Pandora: (() => {
+          const chk = document.getElementById('chk-souv-pandora');
+          const val = document.getElementById('dia-souv-pandora') ? document.getElementById('dia-souv-pandora').value.trim() : '';
+          return (chk && chk.checked) ? (val || 'Charm Pandora') : '';
+        })(),
+        Souvenir_Riproduzioni: (() => {
+          const chk = document.getElementById('chk-souv-riproduzioni');
+          const val = document.getElementById('dia-souv-riproduzioni') ? document.getElementById('dia-souv-riproduzioni').value.trim() : '';
+          return (chk && chk.checked) ? (val || 'Riproduzione / Modellino storico') : '';
+        })(),
+        Souvenir: document.getElementById('dia-souvenir') ? document.getElementById('dia-souvenir').value.trim() : "",
 
         // Nuovi campi strutturati Esperienze
-        Esperienze_Torri: document.getElementById('dia-esp-torri') ? document.getElementById('dia-esp-torri').value.trim() : "",
-        Esperienze_Ruote: document.getElementById('dia-esp-ruote') ? document.getElementById('dia-esp-ruote').value.trim() : "",
-        Esperienze_CatCaffe: document.getElementById('dia-esp-catcaffe') ? document.getElementById('dia-esp-catcaffe').value.trim() : "",
-        Esperienze_Luoghi: document.getElementById('dia-esperienze').value.trim(),
+        Esperienze_Torri: (() => {
+          const chk = document.getElementById('chk-esp-torri');
+          const val = document.getElementById('dia-esp-torri') ? document.getElementById('dia-esp-torri').value.trim() : '';
+          return (chk && chk.checked) ? (val || 'Torre Panoramica') : '';
+        })(),
+        Esperienze_Ruote: (() => {
+          const chk = document.getElementById('chk-esp-ruote');
+          const val = document.getElementById('dia-esp-ruote') ? document.getElementById('dia-esp-ruote').value.trim() : '';
+          return (chk && chk.checked) ? (val || 'Ruota Panoramica') : '';
+        })(),
+        Esperienze_CatCaffe: (() => {
+          const chk = document.getElementById('chk-esp-catcaffe');
+          const val = document.getElementById('dia-esp-catcaffe') ? document.getElementById('dia-esp-catcaffe').value.trim() : '';
+          return (chk && chk.checked) ? (val || 'Cat Caffè') : '';
+        })(),
+        Esperienze_Luoghi: document.getElementById('dia-esperienze') ? document.getElementById('dia-esperienze').value.trim() : "",
 
         Momenti_Da_Ricordare: document.getElementById('dia-momenti').value.trim(),
         Link_Podcast: document.getElementById('dia-podcast').value.trim(),

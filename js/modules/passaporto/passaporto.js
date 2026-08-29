@@ -160,48 +160,71 @@ const PassaportoModule = {
         mostExpensiveTrip = t;
       }
 
+      // Timestamp per ordinamento cronologico dal più recente al più vecchio (Punto 2)
+      const getTripTimestamp = (tripObj) => {
+        if (tripObj.Data_Fine_Globale) {
+          const norm = CONFIG.normalizeDateStr(tripObj.Data_Fine_Globale);
+          const p = norm.split("-");
+          if (p.length === 3) return new Date(p[0], p[1] - 1, p[2], 23, 59, 59).getTime();
+        }
+        if (tripObj.Data_Inizio_Globale) {
+          const norm = CONFIG.normalizeDateStr(tripObj.Data_Inizio_Globale);
+          const p = norm.split("-");
+          if (p.length === 3) return new Date(p[0], p[1] - 1, p[2], 0, 0, 0).getTime();
+        }
+        if (tripObj.Anno_Viaggio) {
+          const y = parseInt(String(tripObj.Anno_Viaggio).match(/\d{4}/)?.[0] || '0');
+          if (y > 0) return new Date(y, 11, 31, 23, 59, 59).getTime();
+        }
+        return 0;
+      };
+
+      const tripTime = getTripTimestamp(t);
+      const dStart = CONFIG.formatDateDisplay(t.Data_Inizio_Globale);
+      const dEnd = CONFIG.formatDateDisplay(t.Data_Fine_Globale);
+      const dLabel = dStart && dEnd ? `${dStart} ➔ ${dEnd}` : (dStart || (t.Anno_Viaggio ? `Anno ${t.Anno_Viaggio}` : ''));
+
       // Raccolta Souvenir
-      const dLabel = CONFIG.formatDateDisplay(t.Data_Inizio_Globale) || t.Anno_Viaggio || '';
       if (t.Souvenir_Starbucks) {
         String(t.Souvenir_Starbucks).split('\n').map(s => s.trim()).filter(Boolean).forEach(item => {
-          starbucksItems.push({ item, tripName: t.Nome_Viaggio, tripId: t.ID_Viaggio, date: dLabel });
+          starbucksItems.push({ item, tripName: t.Nome_Viaggio, tripId: t.ID_Viaggio, date: dLabel, timestamp: tripTime, stati: t.Stati, citta: t.Citta });
         });
       }
       if (t.Souvenir_Pandora) {
         String(t.Souvenir_Pandora).split('\n').map(s => s.trim()).filter(Boolean).forEach(item => {
-          pandoraItems.push({ item, tripName: t.Nome_Viaggio, tripId: t.ID_Viaggio, date: dLabel });
+          pandoraItems.push({ item, tripName: t.Nome_Viaggio, tripId: t.ID_Viaggio, date: dLabel, timestamp: tripTime, stati: t.Stati, citta: t.Citta });
         });
       }
       if (t.Souvenir_Riproduzioni) {
         String(t.Souvenir_Riproduzioni).split('\n').map(s => s.trim()).filter(Boolean).forEach(item => {
-          riproduzioniItems.push({ item, tripName: t.Nome_Viaggio, tripId: t.ID_Viaggio, date: dLabel });
+          riproduzioniItems.push({ item, tripName: t.Nome_Viaggio, tripId: t.ID_Viaggio, date: dLabel, timestamp: tripTime, stati: t.Stati, citta: t.Citta });
         });
       }
       if (t.Souvenir) {
         String(t.Souvenir).split('\n').map(s => s.trim()).filter(Boolean).forEach(item => {
-          otherSouvenirs.push({ item, tripName: t.Nome_Viaggio, tripId: t.ID_Viaggio, date: dLabel });
+          otherSouvenirs.push({ item, tripName: t.Nome_Viaggio, tripId: t.ID_Viaggio, date: dLabel, timestamp: tripTime, stati: t.Stati, citta: t.Citta });
         });
       }
 
       // Raccolta Esperienze
       if (t.Esperienze_Torri) {
         String(t.Esperienze_Torri).split('\n').map(s => s.trim()).filter(Boolean).forEach(item => {
-          torriItems.push({ item, tripName: t.Nome_Viaggio, tripId: t.ID_Viaggio, date: dLabel });
+          torriItems.push({ item, tripName: t.Nome_Viaggio, tripId: t.ID_Viaggio, date: dLabel, timestamp: tripTime, stati: t.Stati, citta: t.Citta });
         });
       }
       if (t.Esperienze_Ruote) {
         String(t.Esperienze_Ruote).split('\n').map(s => s.trim()).filter(Boolean).forEach(item => {
-          ruoteItems.push({ item, tripName: t.Nome_Viaggio, tripId: t.ID_Viaggio, date: dLabel });
+          ruoteItems.push({ item, tripName: t.Nome_Viaggio, tripId: t.ID_Viaggio, date: dLabel, timestamp: tripTime, stati: t.Stati, citta: t.Citta });
         });
       }
       if (t.Esperienze_CatCaffe) {
         String(t.Esperienze_CatCaffe).split('\n').map(s => s.trim()).filter(Boolean).forEach(item => {
-          catCaffeItems.push({ item, tripName: t.Nome_Viaggio, tripId: t.ID_Viaggio, date: dLabel });
+          catCaffeItems.push({ item, tripName: t.Nome_Viaggio, tripId: t.ID_Viaggio, date: dLabel, timestamp: tripTime, stati: t.Stati, citta: t.Citta });
         });
       }
       if (t.Esperienze_Luoghi) {
         String(t.Esperienze_Luoghi).split('\n').map(s => s.trim()).filter(Boolean).forEach(item => {
-          otherExperiences.push({ item, tripName: t.Nome_Viaggio, tripId: t.ID_Viaggio, date: dLabel });
+          otherExperiences.push({ item, tripName: t.Nome_Viaggio, tripId: t.ID_Viaggio, date: dLabel, timestamp: tripTime, stati: t.Stati, citta: t.Citta });
         });
       }
 
@@ -214,6 +237,17 @@ const PassaportoModule = {
         intensity
       };
     });
+
+    // Ordinamento cronologico decrescente per tutte le liste di souvenir ed esperienze (dal più recente al più vecchio)
+    const sortByRecent = (arr) => arr.sort((a, b) => b.timestamp - a.timestamp);
+    sortByRecent(starbucksItems);
+    sortByRecent(pandoraItems);
+    sortByRecent(riproduzioniItems);
+    sortByRecent(otherSouvenirs);
+    sortByRecent(torriItems);
+    sortByRecent(ruoteItems);
+    sortByRecent(catCaffeItems);
+    sortByRecent(otherExperiences);
 
     const visitedStatesCount = visitedStatesMap.size;
     const totalCitiesCount = visitedCitiesMap.size;
@@ -373,7 +407,7 @@ const PassaportoModule = {
             const dateText = dStart && dEnd ? `Dal ${dStart} al ${dEnd}` : (dStart ? `Data ${dStart}` : (t.Anno_Viaggio ? `Anno ${t.Anno_Viaggio}` : ''));
             const badgeHtml = GeoUtils.getIntensityBadgeHtml(t);
             return `
-              <button type="button" class="card card-mint card-interactive card-btn" onclick="DiarioModule.openTripDetails('${t.ID_Viaggio}', 'passaporto')" aria-label="Scheda viaggio: ${t.Nome_Viaggio}. ${dateText}. ${t.Stati ? `Stati: ${t.Stati.replace(/\n/g, ', ')}.` : ''} Tocca due volte per aprire i dettagli del viaggio nel Diario di bordo.">
+              <button type="button" class="card card-mint card-interactive card-btn" onclick="DiarioModule.openTripDetails('${t.ID_Viaggio}', 'passaporto')" aria-label="${t.Nome_Viaggio}. ${dateText}. ${t.Stati ? `Stati: ${t.Stati.replace(/\n/g, ', ')}.` : ''} Tocca due volte per aprire i dettagli del viaggio nel Diario di bordo.">
                 <div aria-hidden="true">
                   <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
                     <h3 style="color: var(--mint); margin: 0;">${t.Nome_Viaggio}</h3>
@@ -386,7 +420,6 @@ const PassaportoModule = {
                     📅 ${dStart && dEnd ? `${dStart} -> ${dEnd}` : (t.Anno_Viaggio || dStart || '-')}
                     ${t.Stati ? ` | 📍 ${t.Stati.replace(/\n/g, ', ')}` : ''}
                   </p>
-                  ${t.Citta ? `<p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;">Tappe: ${t.Citta.replace(/\n/g, ' ➔ ')}</p>` : ''}
                 </div>
               </button>
             `;
@@ -423,7 +456,65 @@ const PassaportoModule = {
         Centro statistico, record di coppia, badge milestone e analisi dettagliata di tutte le nostre avventure nel mondo.
       </p>
 
-      <!-- SEZIONE BADGE MILESTONE PROGRESSIVI (PUNTO 7) -->
+      <!-- 1. SEZIONE TRAGUARDI: GIORNI VIAGGIATI (BADGE 365) & GIRI DELLA TERRA / LUNA (PUNTO 4) -->
+      <section class="card" style="border: 2px solid ${hasYearBadge ? 'var(--mint)' : 'var(--pink)'}; background: ${hasYearBadge ? 'linear-gradient(135deg, rgba(255,128,191,0.12), rgba(0,255,163,0.14))' : 'rgba(255,128,191,0.06)'}; margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <h2 style="margin: 0; color: ${hasYearBadge ? 'var(--mint)' : 'var(--pink)'}; border: none;">
+            ${hasYearBadge ? '🏅 TRAGUARDO: 365+ GIORNI DI VITA ON THE ROAD!' : '📅 TEMPO E DISTANZE IN VIAGGIO'}
+          </h2>
+          ${hasYearBadge ? `
+            <span style="background: var(--mint); color: #000; font-weight: 800; font-size: 0.85rem; padding: 4px 10px; border-radius: 12px;">
+              ✨ ${yearsTraveledCount} ${yearsTraveledCount === 1 ? 'ANNO' : 'ANNI'} DI VIAGGIO!
+            </span>
+          ` : ''}
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-top: 14px;">
+          <!-- BOX 1: GIORNI TOTALI -->
+          <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 12px;">
+            <p style="color: #aaa; font-size: 0.85rem; margin: 0;">GIORNI TOTALI IN VIAGGIO</p>
+            <p class="stat-value" style="font-size: 1.4rem; margin: 4px 0;">
+              📅 ${stats.totalDaysTraveled} GIORNI
+            </p>
+            <p style="color: var(--pink-light); font-size: 0.85rem; margin: 4px 0 6px 0;">
+              ${hasYearBadge ? `Traguardo 365 giorni superato con successo!` : `${stats.totalDaysTraveled} / 365 giorni verso il 1° Anno di Viaggi (${((stats.totalDaysTraveled/365)*100).toFixed(1)}%)`}
+            </p>
+            <div class="progress-container" style="height: 8px;">
+              <div class="progress-fill" style="width: ${Math.min(100, Math.round((stats.totalDaysTraveled/365)*100))}%;"></div>
+            </div>
+          </div>
+
+          <!-- BOX 2: GIRI DELLA TERRA (40.075 KM) -->
+          <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 12px;">
+            <p style="color: #aaa; font-size: 0.85rem; margin: 0;">GIRI DELLA TERRA ALL'EQUATORE (40.075 KM)</p>
+            <p class="stat-value" style="font-size: 1.4rem; margin: 4px 0;">
+              🌐 ${stats.completedEarthLaps} ${stats.completedEarthLaps === 1 ? 'GIRO COMPLETATO' : 'GIRI COMPLETATI'}
+            </p>
+            <p style="color: var(--mint); font-size: 0.85rem; margin: 4px 0 6px 0;">
+              ${stats.currentEarthLapKm.toLocaleString('it-IT')} / 40.075 km verso il prossimo giro (${stats.earthLapPercent}%)
+            </p>
+            <div class="progress-container" style="height: 8px;">
+              <div class="progress-fill" style="width: ${stats.earthLapPercent}%; background: var(--mint);"></div>
+            </div>
+          </div>
+
+          <!-- BOX 3: DISTANZA TERRA - LUNA (384.400 KM) -->
+          <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 12px;">
+            <p style="color: #aaa; font-size: 0.85rem; margin: 0;">DISTANZA VERSO LA LUNA (384.400 KM)</p>
+            <p class="stat-value" style="font-size: 1.4rem; margin: 4px 0;">
+              🚀 ${stats.totalKilometersTraveled.toLocaleString('it-IT')} KM PERCORSI
+            </p>
+            <p style="color: var(--pink-light); font-size: 0.85rem; margin: 4px 0 6px 0;">
+              ${stats.moonPercent}% della distanza Terra-Luna coperta insieme!
+            </p>
+            <div class="progress-container" style="height: 8px;">
+              <div class="progress-fill" style="width: ${Math.min(100, parseFloat(stats.moonPercent))}%; background: var(--pink);"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. SEZIONE BADGE MILESTONE PROGRESSIVI (PUNTO 7) -->
       <section class="card" style="border: 2px solid var(--mint); background: rgba(0,255,163,0.04); margin-bottom: 20px;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
           <h2 style="margin: 0; color: var(--mint); border: none;">
@@ -532,64 +623,6 @@ const PassaportoModule = {
             </p>
             <div class="progress-container" style="height: 6px;">
               <div class="progress-fill" style="width: ${b.catCaffe.progressPercent}%; background: var(--pink);"></div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 1. SEZIONE TRAGUARDI: GIORNI VIAGGIATI (BADGE 365) & GIRI DELLA TERRA / LUNA -->
-      <section class="card" style="border: 2px solid ${hasYearBadge ? 'var(--mint)' : 'var(--pink)'}; background: ${hasYearBadge ? 'linear-gradient(135deg, rgba(255,128,191,0.12), rgba(0,255,163,0.14))' : 'rgba(255,128,191,0.06)'}; margin-bottom: 20px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-          <h2 style="margin: 0; color: ${hasYearBadge ? 'var(--mint)' : 'var(--pink)'}; border: none;">
-            ${hasYearBadge ? '🏅 TRAGUARDO: 365+ GIORNI DI VITA ON THE ROAD!' : '📅 TEMPO E DISTANZE IN VIAGGIO'}
-          </h2>
-          ${hasYearBadge ? `
-            <span style="background: var(--mint); color: #000; font-weight: 800; font-size: 0.85rem; padding: 4px 10px; border-radius: 12px;">
-              ✨ ${yearsTraveledCount} ${yearsTraveledCount === 1 ? 'ANNO' : 'ANNI'} DI VIAGGIO!
-            </span>
-          ` : ''}
-        </div>
-
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-top: 14px;">
-          <!-- BOX 1: GIORNI TOTALI -->
-          <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 12px;">
-            <p style="color: #aaa; font-size: 0.85rem; margin: 0;">GIORNI TOTALI IN VIAGGIO</p>
-            <p class="stat-value" style="font-size: 1.4rem; margin: 4px 0;">
-              📅 ${stats.totalDaysTraveled} GIORNI
-            </p>
-            <p style="color: var(--pink-light); font-size: 0.85rem; margin: 4px 0 6px 0;">
-              ${hasYearBadge ? `Traguardo 365 giorni superato con successo!` : `${stats.totalDaysTraveled} / 365 giorni verso il 1° Anno di Viaggi (${((stats.totalDaysTraveled/365)*100).toFixed(1)}%)`}
-            </p>
-            <div class="progress-container" style="height: 8px;">
-              <div class="progress-fill" style="width: ${Math.min(100, Math.round((stats.totalDaysTraveled/365)*100))}%;"></div>
-            </div>
-          </div>
-
-          <!-- BOX 2: GIRI DELLA TERRA (40.075 KM) -->
-          <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 12px;">
-            <p style="color: #aaa; font-size: 0.85rem; margin: 0;">GIRI DELLA TERRA ALL'EQUATORE (40.075 KM)</p>
-            <p class="stat-value" style="font-size: 1.4rem; margin: 4px 0;">
-              🌐 ${stats.completedEarthLaps} ${stats.completedEarthLaps === 1 ? 'GIRO COMPLETATO' : 'GIRI COMPLETATI'}
-            </p>
-            <p style="color: var(--mint); font-size: 0.85rem; margin: 4px 0 6px 0;">
-              ${stats.currentEarthLapKm.toLocaleString('it-IT')} / 40.075 km verso il prossimo giro (${stats.earthLapPercent}%)
-            </p>
-            <div class="progress-container" style="height: 8px;">
-              <div class="progress-fill" style="width: ${stats.earthLapPercent}%; background: var(--mint);"></div>
-            </div>
-          </div>
-
-          <!-- BOX 3: DISTANZA TERRA - LUNA (384.400 KM) -->
-          <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 12px;">
-            <p style="color: #aaa; font-size: 0.85rem; margin: 0;">DISTANZA VERSO LA LUNA (384.400 KM)</p>
-            <p class="stat-value" style="font-size: 1.4rem; margin: 4px 0;">
-              🚀 ${stats.totalKilometersTraveled.toLocaleString('it-IT')} KM PERCORSI
-            </p>
-            <p style="color: var(--pink-light); font-size: 0.85rem; margin: 4px 0 6px 0;">
-              ${stats.moonPercent}% della distanza Terra-Luna coperta insieme!
-            </p>
-            <div class="progress-container" style="height: 8px;">
-              <div class="progress-fill" style="width: ${Math.min(100, parseFloat(stats.moonPercent))}%; background: var(--pink);"></div>
             </div>
           </div>
         </div>
@@ -765,7 +798,7 @@ const PassaportoModule = {
             const badgeHtml = GeoUtils.getIntensityBadgeHtml(t);
 
             return `
-              <button type="button" class="card card-mint card-interactive card-btn" onclick="DiarioModule.openTripDetails('${t.ID_Viaggio}', 'passaporto')" aria-label="Scheda viaggio: ${t.Nome_Viaggio}. ${dateText}. ${t.intensity.ariaLabel}. Tocca due volte per aprire i dettagli del viaggio nel Diario di bordo.">
+              <button type="button" class="card card-mint card-interactive card-btn" onclick="DiarioModule.openTripDetails('${t.ID_Viaggio}', 'passaporto')" aria-label="${t.Nome_Viaggio}. ${dateText}. ${t.intensity.ariaLabel}. Tocca due volte per aprire i dettagli del viaggio nel Diario di bordo.">
                 <div aria-hidden="true">
                   <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
                     <h3 style="color: var(--mint); margin: 0;">${t.Nome_Viaggio}</h3>
@@ -787,7 +820,7 @@ const PassaportoModule = {
     `;
   },
 
-  // LA MIA GALLERIA DEI RICORDI (Punto 6)
+  // LA MIA GALLERIA DEI RICORDI (Punto 2 & Punto 6)
   renderGalleriaRicordi(container) {
     const stats = this.getAggregatedData();
 
@@ -803,7 +836,7 @@ const PassaportoModule = {
 
       <h1 id="screen-title" tabindex="-1">LA MIA GALLERIA DEI RICORDI</h1>
       <p style="color: var(--pink-light); margin-bottom: 16px;">
-        Catalogo e archivio itemizzato di tutti i souvenir, charm, modellini e ricordi raccolti nel mondo.
+        Catalogo e archivio cronologico di tutti i souvenir, charm, modellini e ricordi raccolti nel mondo (ordinati dal più recente al più vecchio).
       </p>
 
       <!-- 1. TAZZINE STARBUCKS -->
@@ -817,10 +850,13 @@ const PassaportoModule = {
         ${stats.starbucksItems.length > 0 ? `
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-top: 12px;">
             ${stats.starbucksItems.map(it => `
-              <div style="background: rgba(0,255,163,0.06); border: 1px solid var(--mint); border-radius: 8px; padding: 10px;">
-                <p style="font-weight: 700; color: #FFFFFF; margin: 0 0 4px 0;">☕ ${it.item}</p>
-                <p style="color: var(--pink-light); font-size: 0.8rem; margin: 0;">
-                  ✈️ <a href="javascript:void(0)" onclick="DiarioModule.openTripDetails('${it.tripId}', 'passaporto')" style="color: var(--pink-light); text-decoration: underline;">${it.tripName}</a> (${it.date})
+              <div class="card card-interactive" style="background: rgba(0,255,163,0.06); border: 1px solid var(--mint); border-radius: 8px; padding: 12px; margin: 0;">
+                <p style="font-weight: 700; color: #FFFFFF; margin: 0 0 6px 0; font-size: 1rem;">☕ ${it.item}</p>
+                <p style="color: var(--pink-light); font-size: 0.85rem; margin: 0;">
+                  ✈️ <a href="javascript:void(0)" onclick="DiarioModule.openTripDetails('${it.tripId}', 'passaporto')" style="color: var(--pink-light); text-decoration: underline; font-weight: 700;">${it.tripName}</a>
+                </p>
+                <p style="color: #aaa; font-size: 0.8rem; margin: 4px 0 0 0;">
+                  📅 ${it.date || '-'}${it.stati ? ` | 📍 ${(it.stati || '').replace(/\n/g, ', ')}` : ''}
                 </p>
               </div>
             `).join('')}
@@ -839,10 +875,13 @@ const PassaportoModule = {
         ${stats.pandoraItems.length > 0 ? `
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-top: 12px;">
             ${stats.pandoraItems.map(it => `
-              <div style="background: rgba(255,128,191,0.06); border: 1px solid var(--pink); border-radius: 8px; padding: 10px;">
-                <p style="font-weight: 700; color: #FFFFFF; margin: 0 0 4px 0;">💎 ${it.item}</p>
-                <p style="color: var(--mint); font-size: 0.8rem; margin: 0;">
-                  ✈️ <a href="javascript:void(0)" onclick="DiarioModule.openTripDetails('${it.tripId}', 'passaporto')" style="color: var(--mint); text-decoration: underline;">${it.tripName}</a> (${it.date})
+              <div class="card card-interactive" style="background: rgba(255,128,191,0.06); border: 1px solid var(--pink); border-radius: 8px; padding: 12px; margin: 0;">
+                <p style="font-weight: 700; color: #FFFFFF; margin: 0 0 6px 0; font-size: 1rem;">💎 ${it.item}</p>
+                <p style="color: var(--mint); font-size: 0.85rem; margin: 0;">
+                  ✈️ <a href="javascript:void(0)" onclick="DiarioModule.openTripDetails('${it.tripId}', 'passaporto')" style="color: var(--mint); text-decoration: underline; font-weight: 700;">${it.tripName}</a>
+                </p>
+                <p style="color: #aaa; font-size: 0.8rem; margin: 4px 0 0 0;">
+                  📅 ${it.date || '-'}${it.stati ? ` | 📍 ${(it.stati || '').replace(/\n/g, ', ')}` : ''}
                 </p>
               </div>
             `).join('')}
@@ -861,10 +900,13 @@ const PassaportoModule = {
         ${stats.riproduzioniItems.length > 0 ? `
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-top: 12px;">
             ${stats.riproduzioniItems.map(it => `
-              <div style="background: rgba(0,255,163,0.06); border: 1px solid var(--mint); border-radius: 8px; padding: 10px;">
-                <p style="font-weight: 700; color: #FFFFFF; margin: 0 0 4px 0;">🏛️ ${it.item}</p>
-                <p style="color: var(--pink-light); font-size: 0.8rem; margin: 0;">
-                  ✈️ <a href="javascript:void(0)" onclick="DiarioModule.openTripDetails('${it.tripId}', 'passaporto')" style="color: var(--pink-light); text-decoration: underline;">${it.tripName}</a> (${it.date})
+              <div class="card card-interactive" style="background: rgba(0,255,163,0.06); border: 1px solid var(--mint); border-radius: 8px; padding: 12px; margin: 0;">
+                <p style="font-weight: 700; color: #FFFFFF; margin: 0 0 6px 0; font-size: 1rem;">🏛️ ${it.item}</p>
+                <p style="color: var(--pink-light); font-size: 0.85rem; margin: 0;">
+                  ✈️ <a href="javascript:void(0)" onclick="DiarioModule.openTripDetails('${it.tripId}', 'passaporto')" style="color: var(--pink-light); text-decoration: underline; font-weight: 700;">${it.tripName}</a>
+                </p>
+                <p style="color: #aaa; font-size: 0.8rem; margin: 4px 0 0 0;">
+                  📅 ${it.date || '-'}${it.stati ? ` | 📍 ${(it.stati || '').replace(/\n/g, ', ')}` : ''}
                 </p>
               </div>
             `).join('')}
@@ -878,10 +920,13 @@ const PassaportoModule = {
         ${stats.otherSouvenirs.length > 0 ? `
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-top: 12px;">
             ${stats.otherSouvenirs.map(it => `
-              <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 10px;">
-                <p style="font-weight: 700; color: #FFFFFF; margin: 0 0 4px 0;">🛍️ ${it.item}</p>
-                <p style="color: #aaa; font-size: 0.8rem; margin: 0;">
-                  ✈️ <a href="javascript:void(0)" onclick="DiarioModule.openTripDetails('${it.tripId}', 'passaporto')" style="color: var(--pink-light); text-decoration: underline;">${it.tripName}</a> (${it.date})
+              <div class="card card-interactive" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 12px; margin: 0;">
+                <p style="font-weight: 700; color: #FFFFFF; margin: 0 0 6px 0; font-size: 1rem;">🛍️ ${it.item}</p>
+                <p style="color: #aaa; font-size: 0.85rem; margin: 0;">
+                  ✈️ <a href="javascript:void(0)" onclick="DiarioModule.openTripDetails('${it.tripId}', 'passaporto')" style="color: var(--pink-light); text-decoration: underline; font-weight: 700;">${it.tripName}</a>
+                </p>
+                <p style="color: #888; font-size: 0.8rem; margin: 4px 0 0 0;">
+                  📅 ${it.date || '-'}${it.stati ? ` | 📍 ${(it.stati || '').replace(/\n/g, ', ')}` : ''}
                 </p>
               </div>
             `).join('')}
@@ -891,7 +936,7 @@ const PassaportoModule = {
     `;
   },
 
-  // TRAGUARDI ED ESPLORAZIONI (Punto 6)
+  // TRAGUARDI ED ESPLORAZIONI (Punto 2 & Punto 6)
   renderTraguardiEsplorazioni(container) {
     const stats = this.getAggregatedData();
 
@@ -907,7 +952,7 @@ const PassaportoModule = {
 
       <h1 id="screen-title" tabindex="-1">TRAGUARDI ED ESPLORAZIONI</h1>
       <p style="color: var(--pink-light); margin-bottom: 16px;">
-        Panoramica delle vette, delle grandi ruote panoramiche, dei cat caffè e delle attrazioni esperienziali nel mondo.
+        Panoramica cronologica delle vette, delle grandi ruote panoramiche, dei cat caffè e delle attrazioni esperienziali nel mondo (ordinate dalla più recente alla più vecchia).
       </p>
 
       <!-- 1. TORRI PANORAMICHE -->
@@ -921,10 +966,13 @@ const PassaportoModule = {
         ${stats.torriItems.length > 0 ? `
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-top: 12px;">
             ${stats.torriItems.map(it => `
-              <div style="background: rgba(255,128,191,0.06); border: 1px solid var(--pink); border-radius: 8px; padding: 10px;">
-                <p style="font-weight: 700; color: #FFFFFF; margin: 0 0 4px 0;">🗼 ${it.item}</p>
-                <p style="color: var(--mint); font-size: 0.8rem; margin: 0;">
-                  ✈️ <a href="javascript:void(0)" onclick="DiarioModule.openTripDetails('${it.tripId}', 'passaporto')" style="color: var(--mint); text-decoration: underline;">${it.tripName}</a> (${it.date})
+              <div class="card card-interactive" style="background: rgba(255,128,191,0.06); border: 1px solid var(--pink); border-radius: 8px; padding: 12px; margin: 0;">
+                <p style="font-weight: 700; color: #FFFFFF; margin: 0 0 6px 0; font-size: 1rem;">🗼 ${it.item}</p>
+                <p style="color: var(--mint); font-size: 0.85rem; margin: 0;">
+                  ✈️ <a href="javascript:void(0)" onclick="DiarioModule.openTripDetails('${it.tripId}', 'passaporto')" style="color: var(--mint); text-decoration: underline; font-weight: 700;">${it.tripName}</a>
+                </p>
+                <p style="color: #aaa; font-size: 0.8rem; margin: 4px 0 0 0;">
+                  📅 ${it.date || '-'}${it.stati ? ` | 📍 ${(it.stati || '').replace(/\n/g, ', ')}` : ''}
                 </p>
               </div>
             `).join('')}
@@ -943,10 +991,13 @@ const PassaportoModule = {
         ${stats.ruoteItems.length > 0 ? `
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-top: 12px;">
             ${stats.ruoteItems.map(it => `
-              <div style="background: rgba(0,255,163,0.06); border: 1px solid var(--mint); border-radius: 8px; padding: 10px;">
-                <p style="font-weight: 700; color: #FFFFFF; margin: 0 0 4px 0;">🎡 ${it.item}</p>
-                <p style="color: var(--pink-light); font-size: 0.8rem; margin: 0;">
-                  ✈️ <a href="javascript:void(0)" onclick="DiarioModule.openTripDetails('${it.tripId}', 'passaporto')" style="color: var(--pink-light); text-decoration: underline;">${it.tripName}</a> (${it.date})
+              <div class="card card-interactive" style="background: rgba(0,255,163,0.06); border: 1px solid var(--mint); border-radius: 8px; padding: 12px; margin: 0;">
+                <p style="font-weight: 700; color: #FFFFFF; margin: 0 0 6px 0; font-size: 1rem;">🎡 ${it.item}</p>
+                <p style="color: var(--pink-light); font-size: 0.85rem; margin: 0;">
+                  ✈️ <a href="javascript:void(0)" onclick="DiarioModule.openTripDetails('${it.tripId}', 'passaporto')" style="color: var(--pink-light); text-decoration: underline; font-weight: 700;">${it.tripName}</a>
+                </p>
+                <p style="color: #aaa; font-size: 0.8rem; margin: 4px 0 0 0;">
+                  📅 ${it.date || '-'}${it.stati ? ` | 📍 ${(it.stati || '').replace(/\n/g, ', ')}` : ''}
                 </p>
               </div>
             `).join('')}
@@ -965,10 +1016,13 @@ const PassaportoModule = {
         ${stats.catCaffeItems.length > 0 ? `
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-top: 12px;">
             ${stats.catCaffeItems.map(it => `
-              <div style="background: rgba(255,128,191,0.06); border: 1px solid var(--pink); border-radius: 8px; padding: 10px;">
-                <p style="font-weight: 700; color: #FFFFFF; margin: 0 0 4px 0;">🐱 ${it.item}</p>
-                <p style="color: var(--mint); font-size: 0.8rem; margin: 0;">
-                  ✈️ <a href="javascript:void(0)" onclick="DiarioModule.openTripDetails('${it.tripId}', 'passaporto')" style="color: var(--mint); text-decoration: underline;">${it.tripName}</a> (${it.date})
+              <div class="card card-interactive" style="background: rgba(255,128,191,0.06); border: 1px solid var(--pink); border-radius: 8px; padding: 12px; margin: 0;">
+                <p style="font-weight: 700; color: #FFFFFF; margin: 0 0 6px 0; font-size: 1rem;">🐱 ${it.item}</p>
+                <p style="color: var(--mint); font-size: 0.85rem; margin: 0;">
+                  ✈️ <a href="javascript:void(0)" onclick="DiarioModule.openTripDetails('${it.tripId}', 'passaporto')" style="color: var(--mint); text-decoration: underline; font-weight: 700;">${it.tripName}</a>
+                </p>
+                <p style="color: #aaa; font-size: 0.8rem; margin: 4px 0 0 0;">
+                  📅 ${it.date || '-'}${it.stati ? ` | 📍 ${(it.stati || '').replace(/\n/g, ', ')}` : ''}
                 </p>
               </div>
             `).join('')}
@@ -982,10 +1036,13 @@ const PassaportoModule = {
         ${stats.otherExperiences.length > 0 ? `
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-top: 12px;">
             ${stats.otherExperiences.map(it => `
-              <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 10px;">
-                <p style="font-weight: 700; color: #FFFFFF; margin: 0 0 4px 0;">✨ ${it.item}</p>
-                <p style="color: #aaa; font-size: 0.8rem; margin: 0;">
-                  ✈️ <a href="javascript:void(0)" onclick="DiarioModule.openTripDetails('${it.tripId}', 'passaporto')" style="color: var(--pink-light); text-decoration: underline;">${it.tripName}</a> (${it.date})
+              <div class="card card-interactive" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 12px; margin: 0;">
+                <p style="font-weight: 700; color: #FFFFFF; margin: 0 0 6px 0; font-size: 1rem;">✨ ${it.item}</p>
+                <p style="color: #aaa; font-size: 0.85rem; margin: 0;">
+                  ✈️ <a href="javascript:void(0)" onclick="DiarioModule.openTripDetails('${it.tripId}', 'passaporto')" style="color: var(--pink-light); text-decoration: underline; font-weight: 700;">${it.tripName}</a>
+                </p>
+                <p style="color: #888; font-size: 0.8rem; margin: 4px 0 0 0;">
+                  📅 ${it.date || '-'}${it.stati ? ` | 📍 ${(it.stati || '').replace(/\n/g, ', ')}` : ''}
                 </p>
               </div>
             `).join('')}
@@ -1075,23 +1132,59 @@ const PassaportoModule = {
         ` : `<p style="color: var(--text-muted);">In attesa del primo viaggio.</p>`}
       </section>
 
-      <!-- 3. RECORD GEOGRAFICI -->
+      <!-- 3. RECORD GEOGRAFICI (ACCESSIBILITÀ VOICEOVER PULITA - PUNTO 3) -->
       <section class="card">
         <h2>RECORD GEOGRAFICI (RIFERIMENTO VENEZIA & POLI)</h2>
-        <div class="table-responsive">
-          <table class="table-closed">
-            <tbody>
-              <tr><th scope="row" style="width: 40%;">CITTÀ PIÙ A NORD</th><td>${geo.mostNorth ? `📍 ${geo.mostNorth.Citta} (${geo.mostNorth.Stato}) [${geo.mostNorth.Latitudine}°]` : 'IN ATTESA DEL PRIMO VIAGGIO'}</td></tr>
-              <tr><th scope="row">CITTÀ PIÙ A SUD</th><td>${geo.mostSouth ? `📍 ${geo.mostSouth.Citta} (${geo.mostSouth.Stato}) [${geo.mostSouth.Latitudine}°]` : 'IN ATTESA DEL PRIMO VIAGGIO'}</td></tr>
-              <tr><th scope="row">CITTÀ PIÙ A EST</th><td>${geo.mostEast ? `📍 ${geo.mostEast.Citta} (${geo.mostEast.Stato}) [${geo.mostEast.Longitudine}°]` : 'IN ATTESA DEL PRIMO VIAGGIO'}</td></tr>
-              <tr><th scope="row">CITTÀ PIÙ A OVEST</th><td>${geo.mostWest ? `📍 ${geo.mostWest.Citta} (${geo.mostWest.Stato}) [${geo.mostWest.Longitudine}°]` : 'IN ATTESA DEL PRIMO VIAGGIO'}</td></tr>
-              <tr><th scope="row">PIÙ LONTANA DA VENEZIA</th><td>${geo.farthestFromVenice ? `✈️ ${geo.farthestFromVenice.Citta} (${geo.farthestFromVenice.distFromVenice} km in linea d'aria)` : 'IN ATTESA DEL PRIMO VIAGGIO'}</td></tr>
-              <tr><th scope="row">PIÙ VICINE ALL'EQUATORE</th><td>${geo.closestToEquator.length > 0 ? geo.closestToEquator.map((c, i) => `🌍 ${i + 1}. ${c.Citta} (${c.Stato}) [${c.Latitudine}°]`).join('<br>') : 'IN ATTESA DEL PRIMO VIAGGIO'}</td></tr>
-              <tr><th scope="row">PRIME 3 PIÙ VICINE AL POLO NORD</th><td>${geo.closestToNorthPole.length > 0 ? geo.closestToNorthPole.map((c, i) => `❄️ ${i + 1}. ${c.Citta} (${c.Stato}) [${c.Latitudine}°N - ${c.distNorthPoleKm} km dal Polo]`).join('<br>') : 'IN ATTESA DEL PRIMO VIAGGIO'}</td></tr>
-              <tr><th scope="row">PRIME 3 PIÙ VICINE AL POLO SUD</th><td>${geo.closestToSouthPole.length > 0 ? geo.closestToSouthPole.map((c, i) => `❄️ ${i + 1}. ${c.Citta} (${c.Stato}) [${c.Latitudine}° - ${c.distSouthPoleKm} km dal Polo]`).join('<br>') : 'IN ATTESA DEL PRIMO VIAGGIO'}</td></tr>
-            </tbody>
-          </table>
-        </div>
+        <ul class="record-list" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;">
+          <li class="card" style="padding: 10px; margin: 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.12);" aria-label="Città più a Nord: ${geo.mostNorth ? `${geo.mostNorth.Citta} (${geo.mostNorth.Stato}) a latitudine ${geo.mostNorth.Latitudine} gradi` : 'In attesa del primo viaggio'}.">
+            <div aria-hidden="true">
+              <span style="color: var(--pink); font-weight: 700; font-size: 0.85rem; text-transform: uppercase; display: block;">CITTÀ PIÙ A NORD</span>
+              <span style="color: #FFFFFF; font-size: 1rem; margin-top: 4px; display: block;">${geo.mostNorth ? `📍 ${geo.mostNorth.Citta} (${geo.mostNorth.Stato}) [${geo.mostNorth.Latitudine}°]` : 'IN ATTESA DEL PRIMO VIAGGIO'}</span>
+            </div>
+          </li>
+          <li class="card" style="padding: 10px; margin: 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.12);" aria-label="Città più a Sud: ${geo.mostSouth ? `${geo.mostSouth.Citta} (${geo.mostSouth.Stato}) a latitudine ${geo.mostSouth.Latitudine} gradi` : 'In attesa del primo viaggio'}.">
+            <div aria-hidden="true">
+              <span style="color: var(--pink); font-weight: 700; font-size: 0.85rem; text-transform: uppercase; display: block;">CITTÀ PIÙ A SUD</span>
+              <span style="color: #FFFFFF; font-size: 1rem; margin-top: 4px; display: block;">${geo.mostSouth ? `📍 ${geo.mostSouth.Citta} (${geo.mostSouth.Stato}) [${geo.mostSouth.Latitudine}°]` : 'IN ATTESA DEL PRIMO VIAGGIO'}</span>
+            </div>
+          </li>
+          <li class="card" style="padding: 10px; margin: 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.12);" aria-label="Città più a Est: ${geo.mostEast ? `${geo.mostEast.Citta} (${geo.mostEast.Stato}) a longitudine ${geo.mostEast.Longitudine} gradi` : 'In attesa del primo viaggio'}.">
+            <div aria-hidden="true">
+              <span style="color: var(--pink); font-weight: 700; font-size: 0.85rem; text-transform: uppercase; display: block;">CITTÀ PIÙ A EST</span>
+              <span style="color: #FFFFFF; font-size: 1rem; margin-top: 4px; display: block;">${geo.mostEast ? `📍 ${geo.mostEast.Citta} (${geo.mostEast.Stato}) [${geo.mostEast.Longitudine}°]` : 'IN ATTESA DEL PRIMO VIAGGIO'}</span>
+            </div>
+          </li>
+          <li class="card" style="padding: 10px; margin: 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.12);" aria-label="Città più a Ovest: ${geo.mostWest ? `${geo.mostWest.Citta} (${geo.mostWest.Stato}) a longitudine ${geo.mostWest.Longitudine} gradi` : 'In attesa del primo viaggio'}.">
+            <div aria-hidden="true">
+              <span style="color: var(--pink); font-weight: 700; font-size: 0.85rem; text-transform: uppercase; display: block;">CITTÀ PIÙ A OVEST</span>
+              <span style="color: #FFFFFF; font-size: 1rem; margin-top: 4px; display: block;">${geo.mostWest ? `📍 ${geo.mostWest.Citta} (${geo.mostWest.Stato}) [${geo.mostWest.Longitudine}°]` : 'IN ATTESA DEL PRIMO VIAGGIO'}</span>
+            </div>
+          </li>
+          <li class="card" style="padding: 10px; margin: 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.12);" aria-label="Città più lontana da Venezia: ${geo.farthestFromVenice ? `${geo.farthestFromVenice.Citta} (${geo.farthestFromVenice.distFromVenice} km in linea d'aria)` : 'In attesa del primo viaggio'}.">
+            <div aria-hidden="true">
+              <span style="color: var(--pink); font-weight: 700; font-size: 0.85rem; text-transform: uppercase; display: block;">PIÙ LONTANA DA VENEZIA</span>
+              <span style="color: #FFFFFF; font-size: 1rem; margin-top: 4px; display: block;">${geo.farthestFromVenice ? `✈️ ${geo.farthestFromVenice.Citta} (${geo.farthestFromVenice.distFromVenice} km in linea d'aria)` : 'IN ATTESA DEL PRIMO VIAGGIO'}</span>
+            </div>
+          </li>
+          <li class="card" style="padding: 10px; margin: 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.12);" aria-label="Città più vicine all'Equatore: ${geo.closestToEquator.length > 0 ? geo.closestToEquator.map((c, i) => `${i + 1}. ${c.Citta} (${c.Stato}) a latitudine ${c.Latitudine} gradi`).join(', ') : 'In attesa del primo viaggio'}.">
+            <div aria-hidden="true">
+              <span style="color: var(--pink); font-weight: 700; font-size: 0.85rem; text-transform: uppercase; display: block;">PIÙ VICINE ALL'EQUATORE</span>
+              <span style="color: #FFFFFF; font-size: 1rem; margin-top: 4px; display: block;">${geo.closestToEquator.length > 0 ? geo.closestToEquator.map((c, i) => `🌍 ${i + 1}. ${c.Citta} (${c.Stato}) [${c.Latitudine}°]`).join('<br>') : 'IN ATTESA DEL PRIMO VIAGGIO'}</span>
+            </div>
+          </li>
+          <li class="card" style="padding: 10px; margin: 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.12);" aria-label="Prime 3 città più vicine al Polo Nord: ${geo.closestToNorthPole.length > 0 ? geo.closestToNorthPole.map((c, i) => `${i + 1}. ${c.Citta} (${c.Stato}), ${c.distNorthPoleKm} km dal Polo`).join(', ') : 'In attesa del primo viaggio'}.">
+            <div aria-hidden="true">
+              <span style="color: var(--pink); font-weight: 700; font-size: 0.85rem; text-transform: uppercase; display: block;">PRIME 3 PIÙ VICINE AL POLO NORD</span>
+              <span style="color: #FFFFFF; font-size: 1rem; margin-top: 4px; display: block;">${geo.closestToNorthPole.length > 0 ? geo.closestToNorthPole.map((c, i) => `❄️ ${i + 1}. ${c.Citta} (${c.Stato}) [${c.Latitudine}°N - ${c.distNorthPoleKm} km dal Polo]`).join('<br>') : 'IN ATTESA DEL PRIMO VIAGGIO'}</span>
+            </div>
+          </li>
+          <li class="card" style="padding: 10px; margin: 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.12);" aria-label="Prime 3 città più vicine al Polo Sud: ${geo.closestToSouthPole.length > 0 ? geo.closestToSouthPole.map((c, i) => `${i + 1}. ${c.Citta} (${c.Stato}), ${c.distSouthPoleKm} km dal Polo`).join(', ') : 'In attesa del primo viaggio'}.">
+            <div aria-hidden="true">
+              <span style="color: var(--pink); font-weight: 700; font-size: 0.85rem; text-transform: uppercase; display: block;">PRIME 3 PIÙ VICINE AL POLO SUD</span>
+              <span style="color: #FFFFFF; font-size: 1rem; margin-top: 4px; display: block;">${geo.closestToSouthPole.length > 0 ? geo.closestToSouthPole.map((c, i) => `❄️ ${i + 1}. ${c.Citta} (${c.Stato}) [${c.Latitudine}° - ${c.distSouthPoleKm} km dal Polo]`).join('<br>') : 'IN ATTESA DEL PRIMO VIAGGIO'}</span>
+            </div>
+          </li>
+        </ul>
       </section>
 
       <!-- 4. LISTA CITTÀ: SUDDIVISIONE MONDO (ESCLUSA ITALIA) & ITALIA (Punto 5) -->
@@ -1278,7 +1371,7 @@ const PassaportoModule = {
                 const dEnd = CONFIG.formatDateDisplay(t.Data_Fine_Globale);
                 const dateText = dStart && dEnd ? `Dal ${dStart} al ${dEnd}` : (dStart ? `Data ${dStart}` : (t.Anno_Viaggio ? `Anno ${t.Anno_Viaggio}` : ''));
                 return `
-                  <button type="button" class="card card-mint card-interactive card-btn" onclick="DiarioModule.openTripDetails('${t.ID_Viaggio}', 'passaporto')" aria-label="Scheda viaggio: ${t.Nome_Viaggio}. ${dateText}. Apri dettagli viaggio.">
+                  <button type="button" class="card card-mint card-interactive card-btn" onclick="DiarioModule.openTripDetails('${t.ID_Viaggio}', 'passaporto')" aria-label="${t.Nome_Viaggio}. ${dateText}. Tocca due volte per aprire i dettagli del viaggio.">
                     <h3 style="color: var(--mint); margin: 0;">${t.Nome_Viaggio}</h3>
                     <p style="color: #ccc; font-size: 0.9rem; margin-top: 4px;">
                       📅 ${dStart && dEnd ? `${dStart} -> ${dEnd}` : (t.Anno_Viaggio || dStart || '-')}

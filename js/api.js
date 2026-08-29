@@ -151,6 +151,33 @@ const API = {
     try {
       const res = await this.request('getAllData', {}, true);
       if (res && res.status === 'success' && res.data) {
+        // Fusione sicura dei dati remoti con la cache locale per preservare eventuali campi strutturati non ancora sincronizzati sul foglio
+        Object.keys(res.data).forEach(sheetKey => {
+          if (sheetKey === CONFIG.SHEETS.DIARIO && Array.isArray(res.data[sheetKey]) && Array.isArray(this.data[sheetKey])) {
+            const localMap = new Map(this.data[sheetKey].map(t => [String(t.ID_Viaggio), t]));
+            res.data[sheetKey] = res.data[sheetKey].map(remoteItem => {
+              const localItem = localMap.get(String(remoteItem.ID_Viaggio));
+              if (localItem) {
+                return {
+                  ...localItem,
+                  ...remoteItem,
+                  Souvenir_Starbucks: (remoteItem.Souvenir_Starbucks !== undefined && remoteItem.Souvenir_Starbucks !== "") ? remoteItem.Souvenir_Starbucks : (localItem.Souvenir_Starbucks || ""),
+                  Souvenir_Pandora: (remoteItem.Souvenir_Pandora !== undefined && remoteItem.Souvenir_Pandora !== "") ? remoteItem.Souvenir_Pandora : (localItem.Souvenir_Pandora || ""),
+                  Souvenir_Riproduzioni: (remoteItem.Souvenir_Riproduzioni !== undefined && remoteItem.Souvenir_Riproduzioni !== "") ? remoteItem.Souvenir_Riproduzioni : (localItem.Souvenir_Riproduzioni || ""),
+                  Souvenir: (remoteItem.Souvenir !== undefined && remoteItem.Souvenir !== "") ? remoteItem.Souvenir : (localItem.Souvenir || ""),
+                  Esperienze_Torri: (remoteItem.Esperienze_Torri !== undefined && remoteItem.Esperienze_Torri !== "") ? remoteItem.Esperienze_Torri : (localItem.Esperienze_Torri || ""),
+                  Esperienze_Ruote: (remoteItem.Esperienze_Ruote !== undefined && remoteItem.Esperienze_Ruote !== "") ? remoteItem.Esperienze_Ruote : (localItem.Esperienze_Ruote || ""),
+                  Esperienze_CatCaffe: (remoteItem.Esperienze_CatCaffe !== undefined && remoteItem.Esperienze_CatCaffe !== "") ? remoteItem.Esperienze_CatCaffe : (localItem.Esperienze_CatCaffe || ""),
+                  Esperienze_Luoghi: (remoteItem.Esperienze_Luoghi !== undefined && remoteItem.Esperienze_Luoghi !== "") ? remoteItem.Esperienze_Luoghi : (localItem.Esperienze_Luoghi || ""),
+                  Specifiche_Mezzo_Altro: (remoteItem.Specifiche_Mezzo_Altro !== undefined && remoteItem.Specifiche_Mezzo_Altro !== "") ? remoteItem.Specifiche_Mezzo_Altro : (localItem.Specifiche_Mezzo_Altro || ""),
+                  Specifiche_Scopo_Altro: (remoteItem.Specifiche_Scopo_Altro !== undefined && remoteItem.Specifiche_Scopo_Altro !== "") ? remoteItem.Specifiche_Scopo_Altro : (localItem.Specifiche_Scopo_Altro || "")
+                };
+              }
+              return remoteItem;
+            });
+          }
+        });
+
         this.data = { ...this.data, ...res.data };
         this.normalizeAllDataDates();
         await this.reconcileCoordinates();
