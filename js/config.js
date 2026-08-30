@@ -4,7 +4,7 @@
 
 const CONFIG = {
   APP_NAME: "MOTTO ON TOUR",
-  VERSION: "1.8",
+  VERSION: "1.8.1",
   SECRET_PIN: "211221",
   API_URL: "https://script.google.com/macros/s/AKfycbxAVehkLAP3p2O0HQIhOnoC5XnhcrWE1G5Yxltwq1ozwzqiUcsiHwlq0FRcD9TPqQJD/exec",
 

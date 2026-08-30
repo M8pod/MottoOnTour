@@ -239,7 +239,7 @@ const DiarioModule = {
     const starbucksList = String(trip.Souvenir_Starbucks || '').split('\n').map(s => s.trim()).filter(Boolean);
     const pandoraList = String(trip.Souvenir_Pandora || '').split('\n').map(s => s.trim()).filter(Boolean);
     const riproduzioniList = String(trip.Souvenir_Riproduzioni || '').split('\n').map(s => s.trim()).filter(Boolean);
-    const genericSouvenirList = String(trip.Souvenir || '').split('\n').map(s => s.trim()).filter(Boolean);
+    const genericSouvenirList = String(trip.Souvenir_Altri !== undefined ? trip.Souvenir_Altri : (trip.Souvenir || '')).split('\n').map(s => s.trim()).filter(Boolean);
 
     // Strutturazione Esperienze
     const torriList = String(trip.Esperienze_Torri || '').split('\n').map(s => s.trim()).filter(Boolean);
@@ -247,7 +247,7 @@ const DiarioModule = {
     const ruoteList = String(trip.Esperienze_Ruote || '').split('\n').map(s => s.trim()).filter(Boolean);
     const catCaffeList = String(trip.Esperienze_CatCaffe || '').split('\n').map(s => s.trim()).filter(Boolean);
     const caffeStoriciList = String(trip.Esperienze_CaffeStorici || '').split('\n').map(s => s.trim()).filter(Boolean);
-    const genericEspList = String(trip.Esperienze_Luoghi || '').split('\n').map(s => s.trim()).filter(Boolean);
+    const genericEspList = String(trip.Esperienze_Altri !== undefined ? trip.Esperienze_Altri : (trip.Esperienze_Luoghi || '')).split('\n').map(s => s.trim()).filter(Boolean);
 
     const podcastLinks = String(trip.Link_Podcast || '').split('\n').map(p => p.trim()).filter(Boolean);
 
@@ -476,7 +476,10 @@ const DiarioModule = {
 
   renderForm(container) {
     const trips = API.data[CONFIG.SHEETS.DIARIO] || [];
-    const trip = this.activeTripId ? (trips.find(t => t.ID_Viaggio === this.activeTripId) || {}) : {};
+    let trip = this.activeTripId ? (trips.find(t => t.ID_Viaggio === this.activeTripId) || {}) : {};
+    if (trip && trip.ID_Viaggio) {
+      trip = API.normalizeTripCategories({ ...trip });
+    }
     const carriersList = this.getAllAvailableCarriers();
 
     container.innerHTML = `
@@ -647,7 +650,7 @@ const DiarioModule = {
 
           <div class="form-group">
             <label class="form-label" for="dia-souvenir">ALTRI SOUVENIR RACCOLTI (UNO PER RIGA)</label>
-            <textarea id="dia-souvenir" class="form-control" placeholder="es. Calamita Oslo&#10;Poster">${trip.Souvenir || ''}</textarea>
+            <textarea id="dia-souvenir" class="form-control" placeholder="es. Calamita Oslo&#10;Poster">${trip.Souvenir_Altri !== undefined ? trip.Souvenir_Altri : (trip.Souvenir || '')}</textarea>
           </div>
 
           <!-- SEZIONE ESPERIENZE SPECIALI -->
@@ -704,7 +707,7 @@ const DiarioModule = {
 
           <div class="form-group">
             <label class="form-label" for="dia-esperienze">ALTRE ESPERIENZE E LUOGHI VISITATI</label>
-            <textarea id="dia-esperienze" class="form-control" placeholder="es. Museo del Louvre, Parco Tematico...">${trip.Esperienze_Luoghi || ''}</textarea>
+            <textarea id="dia-esperienze" class="form-control" placeholder="es. Museo del Louvre, Parco Tematico...">${trip.Esperienze_Altri !== undefined ? trip.Esperienze_Altri : (trip.Esperienze_Luoghi || '')}</textarea>
           </div>
 
           <div class="form-group">
@@ -861,6 +864,54 @@ const DiarioModule = {
         .filter((val, idx, arr) => arr.indexOf(val) === idx)
         .join('\n');
 
+      // Strutturazione e aggregazione universale Souvenir
+      const souvStarbucks = (() => {
+        const chk = document.getElementById('chk-souv-starbucks');
+        const val = document.getElementById('dia-souv-starbucks') ? document.getElementById('dia-souv-starbucks').value.trim() : '';
+        return (chk && chk.checked) ? (val || 'Tazzina Starbucks') : '';
+      })();
+      const souvPandora = (() => {
+        const chk = document.getElementById('chk-souv-pandora');
+        const val = document.getElementById('dia-souv-pandora') ? document.getElementById('dia-souv-pandora').value.trim() : '';
+        return (chk && chk.checked) ? (val || 'Charm Pandora') : '';
+      })();
+      const souvRiproduzioni = (() => {
+        const chk = document.getElementById('chk-souv-riproduzioni');
+        const val = document.getElementById('dia-souv-riproduzioni') ? document.getElementById('dia-souv-riproduzioni').value.trim() : '';
+        return (chk && chk.checked) ? (val || 'Riproduzione / Modellino storico') : '';
+      })();
+      const souvAltri = document.getElementById('dia-souvenir') ? document.getElementById('dia-souvenir').value.trim() : '';
+      const fullSouvenirs = [souvStarbucks, souvPandora, souvRiproduzioni, souvAltri].filter(Boolean).join('\n');
+
+      // Strutturazione e aggregazione universale Esperienze
+      const espTorri = (() => {
+        const chk = document.getElementById('chk-esp-torri');
+        const val = document.getElementById('dia-esp-torri') ? document.getElementById('dia-esp-torri').value.trim() : '';
+        return (chk && chk.checked) ? (val || 'Torre Panoramica') : '';
+      })();
+      const espParchi = (() => {
+        const chk = document.getElementById('chk-esp-parchi');
+        const val = document.getElementById('dia-esp-parchi') ? document.getElementById('dia-esp-parchi').value.trim() : '';
+        return (chk && chk.checked) ? (val || 'Parco Tematico') : '';
+      })();
+      const espRuote = (() => {
+        const chk = document.getElementById('chk-esp-ruote');
+        const val = document.getElementById('dia-esp-ruote') ? document.getElementById('dia-esp-ruote').value.trim() : '';
+        return (chk && chk.checked) ? (val || 'Ruota Panoramica') : '';
+      })();
+      const espCatCaffe = (() => {
+        const chk = document.getElementById('chk-esp-catcaffe');
+        const val = document.getElementById('dia-esp-catcaffe') ? document.getElementById('dia-esp-catcaffe').value.trim() : '';
+        return (chk && chk.checked) ? (val || 'Cat Caffè') : '';
+      })();
+      const espCaffeStorici = (() => {
+        const chk = document.getElementById('chk-esp-caffestorici');
+        const val = document.getElementById('dia-esp-caffestorici') ? document.getElementById('dia-esp-caffestorici').value.trim() : '';
+        return (chk && chk.checked) ? (val || 'Caffè Storico') : '';
+      })();
+      const espAltri = document.getElementById('dia-esperienze') ? document.getElementById('dia-esperienze').value.trim() : '';
+      const fullExperiences = [espTorri, espParchi, espRuote, espCatCaffe, espCaffeStorici, espAltri].filter(Boolean).join('\n');
+
       const record = {
         ID_Viaggio: this.activeTripId || ("ID_DIA_" + Date.now()),
         Nome_Viaggio: document.getElementById('dia-nome').value.trim(),
@@ -878,51 +929,21 @@ const DiarioModule = {
         Specifiche_Scopo_Altro: hasScopoAltro && document.getElementById('dia-scopo-altro') ? document.getElementById('dia-scopo-altro').value.trim() : "",
         Compagni_Viaggio: document.getElementById('dia-compagni').value.trim(),
         
-        // Nuovi campi strutturati Souvenir
-        Souvenir_Starbucks: (() => {
-          const chk = document.getElementById('chk-souv-starbucks');
-          const val = document.getElementById('dia-souv-starbucks') ? document.getElementById('dia-souv-starbucks').value.trim() : '';
-          return (chk && chk.checked) ? (val || 'Tazzina Starbucks') : '';
-        })(),
-        Souvenir_Pandora: (() => {
-          const chk = document.getElementById('chk-souv-pandora');
-          const val = document.getElementById('dia-souv-pandora') ? document.getElementById('dia-souv-pandora').value.trim() : '';
-          return (chk && chk.checked) ? (val || 'Charm Pandora') : '';
-        })(),
-        Souvenir_Riproduzioni: (() => {
-          const chk = document.getElementById('chk-souv-riproduzioni');
-          const val = document.getElementById('dia-souv-riproduzioni') ? document.getElementById('dia-souv-riproduzioni').value.trim() : '';
-          return (chk && chk.checked) ? (val || 'Riproduzione / Modellino storico') : '';
-        })(),
-        Souvenir: document.getElementById('dia-souvenir') ? document.getElementById('dia-souvenir').value.trim() : "",
+        // Campi strutturati Souvenir
+        Souvenir_Starbucks: souvStarbucks,
+        Souvenir_Pandora: souvPandora,
+        Souvenir_Riproduzioni: souvRiproduzioni,
+        Souvenir_Altri: souvAltri,
+        Souvenir: fullSouvenirs,
 
-        // Nuovi campi strutturati Esperienze
-        Esperienze_Torri: (() => {
-          const chk = document.getElementById('chk-esp-torri');
-          const val = document.getElementById('dia-esp-torri') ? document.getElementById('dia-esp-torri').value.trim() : '';
-          return (chk && chk.checked) ? (val || 'Torre Panoramica') : '';
-        })(),
-        Esperienze_Parchi: (() => {
-          const chk = document.getElementById('chk-esp-parchi');
-          const val = document.getElementById('dia-esp-parchi') ? document.getElementById('dia-esp-parchi').value.trim() : '';
-          return (chk && chk.checked) ? (val || 'Parco Tematico') : '';
-        })(),
-        Esperienze_Ruote: (() => {
-          const chk = document.getElementById('chk-esp-ruote');
-          const val = document.getElementById('dia-esp-ruote') ? document.getElementById('dia-esp-ruote').value.trim() : '';
-          return (chk && chk.checked) ? (val || 'Ruota Panoramica') : '';
-        })(),
-        Esperienze_CatCaffe: (() => {
-          const chk = document.getElementById('chk-esp-catcaffe');
-          const val = document.getElementById('dia-esp-catcaffe') ? document.getElementById('dia-esp-catcaffe').value.trim() : '';
-          return (chk && chk.checked) ? (val || 'Cat Caffè') : '';
-        })(),
-        Esperienze_CaffeStorici: (() => {
-          const chk = document.getElementById('chk-esp-caffestorici');
-          const val = document.getElementById('dia-esp-caffestorici') ? document.getElementById('dia-esp-caffestorici').value.trim() : '';
-          return (chk && chk.checked) ? (val || 'Caffè Storico') : '';
-        })(),
-        Esperienze_Luoghi: document.getElementById('dia-esperienze') ? document.getElementById('dia-esperienze').value.trim() : "",
+        // Campi strutturati Esperienze
+        Esperienze_Torri: espTorri,
+        Esperienze_Parchi: espParchi,
+        Esperienze_Ruote: espRuote,
+        Esperienze_CatCaffe: espCatCaffe,
+        Esperienze_CaffeStorici: espCaffeStorici,
+        Esperienze_Altri: espAltri,
+        Esperienze_Luoghi: fullExperiences,
 
         Momenti_Da_Ricordare: document.getElementById('dia-momenti').value.trim(),
         Link_Podcast: document.getElementById('dia-podcast').value.trim(),

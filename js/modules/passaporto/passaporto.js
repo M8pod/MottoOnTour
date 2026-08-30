@@ -54,6 +54,9 @@ const PassaportoModule = {
   },
 
   getAggregatedData() {
+    if (typeof API !== 'undefined' && API.normalizeAllTripsData) {
+      API.normalizeAllTripsData();
+    }
     const trips = API.data[CONFIG.SHEETS.DIARIO] || [];
     const coords = API.data[CONFIG.SHEETS.COORDINATE] || [];
 
@@ -202,8 +205,9 @@ const PassaportoModule = {
           riproduzioniItems.push({ item, tripName: t.Nome_Viaggio, tripId: t.ID_Viaggio, date: dLabel, timestamp: tripTime, stati: t.Stati, citta: t.Citta });
         });
       }
-      if (t.Souvenir) {
-        String(t.Souvenir).split('\n').map(s => s.trim()).filter(Boolean).forEach(item => {
+      const otherSouvText = t.Souvenir_Altri !== undefined ? t.Souvenir_Altri : (t.Souvenir || '');
+      if (otherSouvText) {
+        String(otherSouvText).split('\n').map(s => s.trim()).filter(Boolean).forEach(item => {
           otherSouvenirs.push({ item, tripName: t.Nome_Viaggio, tripId: t.ID_Viaggio, date: dLabel, timestamp: tripTime, stati: t.Stati, citta: t.Citta });
         });
       }
@@ -234,8 +238,9 @@ const PassaportoModule = {
           caffeStoriciItems.push({ item, tripName: t.Nome_Viaggio, tripId: t.ID_Viaggio, date: dLabel, timestamp: tripTime, stati: t.Stati, citta: t.Citta });
         });
       }
-      if (t.Esperienze_Luoghi) {
-        String(t.Esperienze_Luoghi).split('\n').map(s => s.trim()).filter(Boolean).forEach(item => {
+      const otherEspText = t.Esperienze_Altri !== undefined ? t.Esperienze_Altri : (t.Esperienze_Luoghi || '');
+      if (otherEspText) {
+        String(otherEspText).split('\n').map(s => s.trim()).filter(Boolean).forEach(item => {
           otherExperiences.push({ item, tripName: t.Nome_Viaggio, tripId: t.ID_Viaggio, date: dLabel, timestamp: tripTime, stati: t.Stati, citta: t.Citta });
         });
       }

@@ -36,6 +36,7 @@ const API = {
         const parsed = JSON.parse(local);
         this.data = { ...this.data, ...parsed };
         this.normalizeAllDataDates();
+        this.normalizeAllTripsData();
         const savedSync = localStorage.getItem('motto_last_sync');
         if (savedSync) this.lastSyncTime = new Date(savedSync);
       } catch (e) {}
@@ -45,6 +46,145 @@ const API = {
       GeoUtils.initCustomCitiesCache();
     }
     this.repairCachedCoordinates();
+  },
+
+  // Normalizzazione intelligente e multi-device di tutte le categorie speciali (Badge, Souvenir, Esperienze)
+  normalizeTripCategories(trip) {
+    if (!trip) return trip;
+
+    // 1. Strutturazione e Normalizzazione Souvenir
+    const hasDedicatedSouv = Boolean(
+      (trip.Souvenir_Starbucks && String(trip.Souvenir_Starbucks).trim()) ||
+      (trip.Souvenir_Pandora && String(trip.Souvenir_Pandora).trim()) ||
+      (trip.Souvenir_Riproduzioni && String(trip.Souvenir_Riproduzioni).trim())
+    );
+
+    const rawSouv = String(trip.Souvenir || '').trim();
+    const souvLines = rawSouv.split('\n').map(l => l.trim()).filter(Boolean);
+
+    if (!hasDedicatedSouv && souvLines.length > 0) {
+      const sb = [], pan = [], rip = [], oth = [];
+      souvLines.forEach(line => {
+        const low = line.toLowerCase();
+        if (low.includes('starbucks') || low.includes('[starbucks]')) {
+          sb.push(line);
+        } else if (low.includes('charm') || low.includes('pandora') || low.includes('[pandora]')) {
+          pan.push(line);
+        } else if (
+          low.includes('riproduzion') || low.includes('modellin') ||
+          low.includes('miniatura') || low.includes('statuina') ||
+          low.includes('[riproduzioni]')
+        ) {
+          rip.push(line);
+        } else {
+          oth.push(line);
+        }
+      });
+      trip.Souvenir_Starbucks = sb.join('\n');
+      trip.Souvenir_Pandora = pan.join('\n');
+      trip.Souvenir_Riproduzioni = rip.join('\n');
+      trip.Souvenir_Altri = oth.join('\n');
+    } else if (hasDedicatedSouv) {
+      if (trip.Souvenir_Altri === undefined || trip.Souvenir_Altri === null) {
+        const sbSet = new Set(String(trip.Souvenir_Starbucks || '').toLowerCase().split('\n').map(s => s.trim()).filter(Boolean));
+        const panSet = new Set(String(trip.Souvenir_Pandora || '').toLowerCase().split('\n').map(s => s.trim()).filter(Boolean));
+        const ripSet = new Set(String(trip.Souvenir_Riproduzioni || '').toLowerCase().split('\n').map(s => s.trim()).filter(Boolean));
+        const oth = souvLines.filter(l => !sbSet.has(l.toLowerCase()) && !panSet.has(l.toLowerCase()) && !ripSet.has(l.toLowerCase()));
+        trip.Souvenir_Altri = oth.join('\n');
+      }
+    } else {
+      if (!trip.Souvenir_Starbucks) trip.Souvenir_Starbucks = '';
+      if (!trip.Souvenir_Pandora) trip.Souvenir_Pandora = '';
+      if (!trip.Souvenir_Riproduzioni) trip.Souvenir_Riproduzioni = '';
+      if (trip.Souvenir_Altri === undefined) trip.Souvenir_Altri = '';
+    }
+
+    // 2. Strutturazione e Normalizzazione Esperienze
+    const hasDedicatedEsp = Boolean(
+      (trip.Esperienze_Torri && String(trip.Esperienze_Torri).trim()) ||
+      (trip.Esperienze_Parchi && String(trip.Esperienze_Parchi).trim()) ||
+      (trip.Esperienze_Ruote && String(trip.Esperienze_Ruote).trim()) ||
+      (trip.Esperienze_CatCaffe && String(trip.Esperienze_CatCaffe).trim()) ||
+      (trip.Esperienze_CaffeStorici && String(trip.Esperienze_CaffeStorici).trim())
+    );
+
+    const rawEsp = String(trip.Esperienze_Luoghi || '').trim();
+    const espLines = rawEsp.split('\n').map(l => l.trim()).filter(Boolean);
+
+    if (!hasDedicatedEsp && espLines.length > 0) {
+      const tor = [], par = [], ruo = [], cat = [], caf = [], oth = [];
+      espLines.forEach(line => {
+        const low = line.toLowerCase();
+        if (
+          low.includes('torre') || low.includes('tower') || low.includes('skytree') ||
+          low.includes('sky tree') || low.includes('torri') || low.includes('burji kalifa') ||
+          low.includes('burj khalifa') || low.includes('[torri]')
+        ) {
+          tor.push(line);
+        } else if (
+          low.includes('parco') || low.includes('parchi') || low.includes('disneyland') ||
+          low.includes('disney') || low.includes('gardaland') || low.includes('studios') ||
+          low.includes('universal') || low.includes('mirabilandia') || low.includes('portaventura') ||
+          low.includes('europa park') || low.includes('[parchi]')
+        ) {
+          par.push(line);
+        } else if (
+          low.includes('ruota') || low.includes('ruote') || low.includes('eye') ||
+          low.includes('roller') || low.includes('ferris') || low.includes('[ruote]')
+        ) {
+          ruo.push(line);
+        } else if (
+          low.includes('cat caff') || low.includes('cat caf') || low.includes('neko') ||
+          low.includes('gatti') || low.includes('[catcaffe]')
+        ) {
+          cat.push(line);
+        } else if (
+          (low.includes('caffè') || low.includes('caffe') || low.includes('florian') ||
+           low.includes('greco') || low.includes('central') || low.includes('van gogh') ||
+           low.includes('zaker') || low.includes('sacher') || low.includes('[caffestorici]')) &&
+          !low.includes('starbucks')
+        ) {
+          caf.push(line);
+        } else {
+          oth.push(line);
+        }
+      });
+      trip.Esperienze_Torri = tor.join('\n');
+      trip.Esperienze_Parchi = par.join('\n');
+      trip.Esperienze_Ruote = ruo.join('\n');
+      trip.Esperienze_CatCaffe = cat.join('\n');
+      trip.Esperienze_CaffeStorici = caf.join('\n');
+      trip.Esperienze_Altri = oth.join('\n');
+    } else if (hasDedicatedEsp) {
+      if (trip.Esperienze_Altri === undefined || trip.Esperienze_Altri === null) {
+        const torSet = new Set(String(trip.Esperienze_Torri || '').toLowerCase().split('\n').map(s => s.trim()).filter(Boolean));
+        const parSet = new Set(String(trip.Esperienze_Parchi || '').toLowerCase().split('\n').map(s => s.trim()).filter(Boolean));
+        const ruoSet = new Set(String(trip.Esperienze_Ruote || '').toLowerCase().split('\n').map(s => s.trim()).filter(Boolean));
+        const catSet = new Set(String(trip.Esperienze_CatCaffe || '').toLowerCase().split('\n').map(s => s.trim()).filter(Boolean));
+        const cafSet = new Set(String(trip.Esperienze_CaffeStorici || '').toLowerCase().split('\n').map(s => s.trim()).filter(Boolean));
+        const oth = espLines.filter(l => !torSet.has(l.toLowerCase()) && !parSet.has(l.toLowerCase()) && !ruoSet.has(l.toLowerCase()) && !catSet.has(l.toLowerCase()) && !cafSet.has(l.toLowerCase()));
+        trip.Esperienze_Altri = oth.join('\n');
+      }
+    } else {
+      if (!trip.Esperienze_Torri) trip.Esperienze_Torri = '';
+      if (!trip.Esperienze_Parchi) trip.Esperienze_Parchi = '';
+      if (!trip.Esperienze_Ruote) trip.Esperienze_Ruote = '';
+      if (!trip.Esperienze_CatCaffe) trip.Esperienze_CatCaffe = '';
+      if (!trip.Esperienze_CaffeStorici) trip.Esperienze_CaffeStorici = '';
+      if (trip.Esperienze_Altri === undefined) trip.Esperienze_Altri = '';
+    }
+
+    return trip;
+  },
+
+  normalizeAllTripsData() {
+    [CONFIG.SHEETS.DIARIO, CONFIG.SHEETS.IN_PARTENZA].forEach(sheet => {
+      if (this.data[sheet] && Array.isArray(this.data[sheet])) {
+        this.data[sheet].forEach(trip => {
+          this.normalizeTripCategories(trip);
+        });
+      }
+    });
   },
 
   normalizeAllDataDates() {
@@ -60,6 +200,8 @@ const API = {
         });
       }
     });
+
+    this.normalizeAllTripsData();
 
     if (this.data[CONFIG.SHEETS.SFIDE] && Array.isArray(this.data[CONFIG.SHEETS.SFIDE])) {
       this.data[CONFIG.SHEETS.SFIDE].forEach(ch => {
@@ -224,6 +366,11 @@ const API = {
     }
     if (record.Data_Fine_Globale) {
       record.Data_Fine_Globale = CONFIG.normalizeDateStr(record.Data_Fine_Globale);
+    }
+
+    // Normalizzazione automatica categorie e souvenir/esperienze
+    if (sheetName === CONFIG.SHEETS.DIARIO || sheetName === CONFIG.SHEETS.IN_PARTENZA) {
+      this.normalizeTripCategories(record);
     }
 
     // Ensure Sfide compatibility with both header spellings
@@ -477,6 +624,7 @@ const API = {
 
   // Forza la sincronizzazione di tutti i viaggi del Diario di bordo verso Google Drive
   async syncAllLocalTripsToCloud() {
+    this.normalizeAllTripsData();
     const trips = this.data[CONFIG.SHEETS.DIARIO] || [];
     if (trips.length === 0) return { success: true, count: 0 };
 
