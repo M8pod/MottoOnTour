@@ -243,9 +243,13 @@ const DiarioModule = {
 
     // Strutturazione Esperienze
     const torriList = String(trip.Esperienze_Torri || '').split('\n').map(s => s.trim()).filter(Boolean);
+    const parchiList = String(trip.Esperienze_Parchi || '').split('\n').map(s => s.trim()).filter(Boolean);
     const ruoteList = String(trip.Esperienze_Ruote || '').split('\n').map(s => s.trim()).filter(Boolean);
     const catCaffeList = String(trip.Esperienze_CatCaffe || '').split('\n').map(s => s.trim()).filter(Boolean);
+    const caffeStoriciList = String(trip.Esperienze_CaffeStorici || '').split('\n').map(s => s.trim()).filter(Boolean);
     const genericEspList = String(trip.Esperienze_Luoghi || '').split('\n').map(s => s.trim()).filter(Boolean);
+
+    const podcastLinks = String(trip.Link_Podcast || '').split('\n').map(p => p.trim()).filter(Boolean);
 
     container.innerHTML = `
       <div class="action-bar">
@@ -340,11 +344,26 @@ const DiarioModule = {
               ${riproduzioniList.length > 0 ? `<tr><th scope="row">🏛️ RIPRODUZIONI STORICHE</th><td>${riproduzioniList.join('<br>')}</td></tr>` : ''}
               ${genericSouvenirList.length > 0 ? `<tr><th scope="row">🛍️ ALTRI SOUVENIR</th><td>${genericSouvenirList.join('<br>')}</td></tr>` : ''}
               ${torriList.length > 0 ? `<tr><th scope="row">🗼 TORRI PANORAMICHE</th><td>${torriList.join('<br>')}</td></tr>` : ''}
+              ${parchiList.length > 0 ? `<tr><th scope="row">🎢 PARCHI TEMATICI</th><td>${parchiList.join('<br>')}</td></tr>` : ''}
               ${ruoteList.length > 0 ? `<tr><th scope="row">🎡 RUOTE PANORAMICHE</th><td>${ruoteList.join('<br>')}</td></tr>` : ''}
               ${catCaffeList.length > 0 ? `<tr><th scope="row">🐱 CAT CAFFÈ</th><td>${catCaffeList.join('<br>')}</td></tr>` : ''}
+              ${caffeStoriciList.length > 0 ? `<tr><th scope="row">☕ CAFFÈ STORICI</th><td>${caffeStoriciList.join('<br>')}</td></tr>` : ''}
               ${genericEspList.length > 0 ? `<tr><th scope="row">✨ ALTRE ESPERIENZE</th><td>${genericEspList.join('<br>')}</td></tr>` : ''}
               <tr><th scope="row">MOMENTI DA RICORDARE</th><td>${(trip.Momenti_Da_Ricordare || '-').replace(/\n/g, '<br>')}</td></tr>
-              <tr><th scope="row">LINK PODCAST</th><td>${(trip.Link_Podcast || '-').replace(/\n/g, '<br>')}</td></tr>
+              <tr>
+                <th scope="row">LINK PODCAST</th>
+                <td>
+                  ${podcastLinks.length > 0 ? `
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                      ${podcastLinks.map((url, idx) => `
+                        <a href="${url}" target="_blank" rel="noopener" class="btn btn-sm btn-pink" style="display: inline-flex; align-items: center; gap: 6px; text-decoration: none;" aria-label="Ascolta puntata podcast ${idx + 1}. Apre in una nuova scheda.">
+                          <span aria-hidden="true">🎧</span> Puntata ${idx + 1}
+                        </a>
+                      `).join('')}
+                    </div>
+                  ` : '-'}
+                </td>
+              </tr>
               <tr><th scope="row">NOTE VARIE</th><td>${(trip.Note_Varie || '-').replace(/\n/g, '<br>')}</td></tr>
             </tbody>
           </table>
@@ -640,6 +659,10 @@ const DiarioModule = {
                 <span class="checkbox-label"><span aria-hidden="true">🗼 </span>Torri panoramiche</span>
               </label>
               <label class="checkbox-item">
+                <input type="checkbox" id="chk-esp-parchi" onchange="DiarioModule.toggleExperienceSections()" ${Boolean(trip.Esperienze_Parchi) ? 'checked' : ''}>
+                <span class="checkbox-label"><span aria-hidden="true">🎢 </span>Parchi tematici</span>
+              </label>
+              <label class="checkbox-item">
                 <input type="checkbox" id="chk-esp-ruote" onchange="DiarioModule.toggleExperienceSections()" ${Boolean(trip.Esperienze_Ruote) ? 'checked' : ''}>
                 <span class="checkbox-label"><span aria-hidden="true">🎡 </span>Ruote panoramiche</span>
               </label>
@@ -647,12 +670,21 @@ const DiarioModule = {
                 <input type="checkbox" id="chk-esp-catcaffe" onchange="DiarioModule.toggleExperienceSections()" ${Boolean(trip.Esperienze_CatCaffe) ? 'checked' : ''}>
                 <span class="checkbox-label"><span aria-hidden="true">🐱 </span>Cat caffè</span>
               </label>
+              <label class="checkbox-item">
+                <input type="checkbox" id="chk-esp-caffestorici" onchange="DiarioModule.toggleExperienceSections()" ${Boolean(trip.Esperienze_CaffeStorici) ? 'checked' : ''}>
+                <span class="checkbox-label"><span aria-hidden="true">☕ </span>Caffè storici</span>
+              </label>
             </div>
           </div>
 
           <div id="grp-esp-torri" class="form-group" style="display: ${Boolean(trip.Esperienze_Torri) ? 'block' : 'none'};">
             <label class="form-label" for="dia-esp-torri">TORRI PANORAMICHE VISITATE (UNA PER RIGA)</label>
             <textarea id="dia-esp-torri" class="form-control" placeholder="es. Torre Eiffel (Parigi)&#10;Tokyo Tower&#10;Torre di Pisa">${trip.Esperienze_Torri || ''}</textarea>
+          </div>
+
+          <div id="grp-esp-parchi" class="form-group" style="display: ${Boolean(trip.Esperienze_Parchi) ? 'block' : 'none'};">
+            <label class="form-label" for="dia-esp-parchi">PARCHI TEMATICI VISITATI (UNO PER RIGA)</label>
+            <textarea id="dia-esp-parchi" class="form-control" placeholder="es. Disneyland Paris&#10;Gardaland&#10;Universal Studios Japan">${trip.Esperienze_Parchi || ''}</textarea>
           </div>
 
           <div id="grp-esp-ruote" class="form-group" style="display: ${Boolean(trip.Esperienze_Ruote) ? 'block' : 'none'};">
@@ -663,6 +695,11 @@ const DiarioModule = {
           <div id="grp-esp-catcaffe" class="form-group" style="display: ${Boolean(trip.Esperienze_CatCaffe) ? 'block' : 'none'};">
             <label class="form-label" for="dia-esp-catcaffe">CAT CAFFÈ VISITATI (UNO PER RIGA)</label>
             <textarea id="dia-esp-catcaffe" class="form-control" placeholder="es. Cat Café Neko (Tokyo)&#10;Café des Chats (Parigi)">${trip.Esperienze_CatCaffe || ''}</textarea>
+          </div>
+
+          <div id="grp-esp-caffestorici" class="form-group" style="display: ${Boolean(trip.Esperienze_CaffeStorici) ? 'block' : 'none'};">
+            <label class="form-label" for="dia-esp-caffestorici">CAFFÈ STORICI VISITATI (UNO PER RIGA)</label>
+            <textarea id="dia-esp-caffestorici" class="form-control" placeholder="es. Caffè Florian (Venezia)&#10;Caffè Greco (Roma)&#10;Café Central (Vienna)">${trip.Esperienze_CaffeStorici || ''}</textarea>
           </div>
 
           <div class="form-group">
@@ -748,6 +785,12 @@ const DiarioModule = {
       grpTorri.style.display = chkTorri.checked ? 'block' : 'none';
     }
 
+    const chkParchi = document.getElementById('chk-esp-parchi');
+    const grpParchi = document.getElementById('grp-esp-parchi');
+    if (grpParchi && chkParchi) {
+      grpParchi.style.display = chkParchi.checked ? 'block' : 'none';
+    }
+
     const chkRuote = document.getElementById('chk-esp-ruote');
     const grpRuote = document.getElementById('grp-esp-ruote');
     if (grpRuote && chkRuote) {
@@ -758,6 +801,12 @@ const DiarioModule = {
     const grpCat = document.getElementById('grp-esp-catcaffe');
     if (grpCat && chkCat) {
       grpCat.style.display = chkCat.checked ? 'block' : 'none';
+    }
+
+    const chkCaffeStorici = document.getElementById('chk-esp-caffestorici');
+    const grpCaffeStorici = document.getElementById('grp-esp-caffestorici');
+    if (grpCaffeStorici && chkCaffeStorici) {
+      grpCaffeStorici.style.display = chkCaffeStorici.checked ? 'block' : 'none';
     }
   },
 
@@ -853,6 +902,11 @@ const DiarioModule = {
           const val = document.getElementById('dia-esp-torri') ? document.getElementById('dia-esp-torri').value.trim() : '';
           return (chk && chk.checked) ? (val || 'Torre Panoramica') : '';
         })(),
+        Esperienze_Parchi: (() => {
+          const chk = document.getElementById('chk-esp-parchi');
+          const val = document.getElementById('dia-esp-parchi') ? document.getElementById('dia-esp-parchi').value.trim() : '';
+          return (chk && chk.checked) ? (val || 'Parco Tematico') : '';
+        })(),
         Esperienze_Ruote: (() => {
           const chk = document.getElementById('chk-esp-ruote');
           const val = document.getElementById('dia-esp-ruote') ? document.getElementById('dia-esp-ruote').value.trim() : '';
@@ -862,6 +916,11 @@ const DiarioModule = {
           const chk = document.getElementById('chk-esp-catcaffe');
           const val = document.getElementById('dia-esp-catcaffe') ? document.getElementById('dia-esp-catcaffe').value.trim() : '';
           return (chk && chk.checked) ? (val || 'Cat Caffè') : '';
+        })(),
+        Esperienze_CaffeStorici: (() => {
+          const chk = document.getElementById('chk-esp-caffestorici');
+          const val = document.getElementById('dia-esp-caffestorici') ? document.getElementById('dia-esp-caffestorici').value.trim() : '';
+          return (chk && chk.checked) ? (val || 'Caffè Storico') : '';
         })(),
         Esperienze_Luoghi: document.getElementById('dia-esperienze') ? document.getElementById('dia-esperienze').value.trim() : "",
 

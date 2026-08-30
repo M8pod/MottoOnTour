@@ -166,8 +166,10 @@ const API = {
                   Souvenir_Riproduzioni: (remoteItem.Souvenir_Riproduzioni !== undefined && remoteItem.Souvenir_Riproduzioni !== "") ? remoteItem.Souvenir_Riproduzioni : (localItem.Souvenir_Riproduzioni || ""),
                   Souvenir: (remoteItem.Souvenir !== undefined && remoteItem.Souvenir !== "") ? remoteItem.Souvenir : (localItem.Souvenir || ""),
                   Esperienze_Torri: (remoteItem.Esperienze_Torri !== undefined && remoteItem.Esperienze_Torri !== "") ? remoteItem.Esperienze_Torri : (localItem.Esperienze_Torri || ""),
+                  Esperienze_Parchi: (remoteItem.Esperienze_Parchi !== undefined && remoteItem.Esperienze_Parchi !== "") ? remoteItem.Esperienze_Parchi : (localItem.Esperienze_Parchi || ""),
                   Esperienze_Ruote: (remoteItem.Esperienze_Ruote !== undefined && remoteItem.Esperienze_Ruote !== "") ? remoteItem.Esperienze_Ruote : (localItem.Esperienze_Ruote || ""),
                   Esperienze_CatCaffe: (remoteItem.Esperienze_CatCaffe !== undefined && remoteItem.Esperienze_CatCaffe !== "") ? remoteItem.Esperienze_CatCaffe : (localItem.Esperienze_CatCaffe || ""),
+                  Esperienze_CaffeStorici: (remoteItem.Esperienze_CaffeStorici !== undefined && remoteItem.Esperienze_CaffeStorici !== "") ? remoteItem.Esperienze_CaffeStorici : (localItem.Esperienze_CaffeStorici || ""),
                   Esperienze_Luoghi: (remoteItem.Esperienze_Luoghi !== undefined && remoteItem.Esperienze_Luoghi !== "") ? remoteItem.Esperienze_Luoghi : (localItem.Esperienze_Luoghi || ""),
                   Specifiche_Mezzo_Altro: (remoteItem.Specifiche_Mezzo_Altro !== undefined && remoteItem.Specifiche_Mezzo_Altro !== "") ? remoteItem.Specifiche_Mezzo_Altro : (localItem.Specifiche_Mezzo_Altro || ""),
                   Specifiche_Scopo_Altro: (remoteItem.Specifiche_Scopo_Altro !== undefined && remoteItem.Specifiche_Scopo_Altro !== "") ? remoteItem.Specifiche_Scopo_Altro : (localItem.Specifiche_Scopo_Altro || "")
@@ -471,6 +473,42 @@ const API = {
 
   flushSyncQueue() {
     // Reserved for offline reconciliation
+  },
+
+  // Forza la sincronizzazione di tutti i viaggi del Diario di bordo verso Google Drive
+  async syncAllLocalTripsToCloud() {
+    const trips = this.data[CONFIG.SHEETS.DIARIO] || [];
+    if (trips.length === 0) return { success: true, count: 0 };
+
+    try {
+      const res = await this.request('syncBatchRecords', {
+        sheetName: CONFIG.SHEETS.DIARIO,
+        records: trips,
+        idKey: 'ID_Viaggio'
+      });
+      if (res && res.status === 'success') {
+        this.lastSyncTime = new Date();
+        this.saveLocalCache();
+        return { success: true, count: trips.length };
+      }
+    } catch (e) {
+      console.warn("Batch sync fallback to sequential:", e);
+    }
+
+    let count = 0;
+    for (const trip of trips) {
+      try {
+        await this.request('saveRecord', {
+          sheetName: CONFIG.SHEETS.DIARIO,
+          record: trip,
+          idKey: 'ID_Viaggio'
+        });
+        count++;
+      } catch (err) {}
+    }
+    this.lastSyncTime = new Date();
+    this.saveLocalCache();
+    return { success: true, count };
   },
 
   async restoreBackup(backupData) {

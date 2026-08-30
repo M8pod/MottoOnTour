@@ -241,8 +241,16 @@ const PDFEngine = {
     // 5. Memorie ed Esperienze
     if (includeCategories.includes('memorie')) {
       const memRows = [];
-      if (trip.Esperienze_Luoghi) memRows.push(["Attrazioni ed Esperienze", trip.Esperienze_Luoghi]);
-      if (trip.Souvenir) memRows.push(["Souvenir Raccolti", trip.Souvenir]);
+      if (trip.Souvenir_Starbucks) memRows.push(["Tazzine Starbucks", trip.Souvenir_Starbucks]);
+      if (trip.Souvenir_Pandora) memRows.push(["Charm Pandora", trip.Souvenir_Pandora]);
+      if (trip.Souvenir_Riproduzioni) memRows.push(["Riproduzioni Storiche", trip.Souvenir_Riproduzioni]);
+      if (trip.Souvenir) memRows.push(["Altri Souvenir", trip.Souvenir]);
+      if (trip.Esperienze_Torri) memRows.push(["Torri Panoramiche", trip.Esperienze_Torri]);
+      if (trip.Esperienze_Parchi) memRows.push(["Parchi Tematici", trip.Esperienze_Parchi]);
+      if (trip.Esperienze_Ruote) memRows.push(["Ruote Panoramiche", trip.Esperienze_Ruote]);
+      if (trip.Esperienze_CatCaffe) memRows.push(["Cat Caffè", trip.Esperienze_CatCaffe]);
+      if (trip.Esperienze_CaffeStorici) memRows.push(["Caffè Storici", trip.Esperienze_CaffeStorici]);
+      if (trip.Esperienze_Luoghi) memRows.push(["Altre Esperienze", trip.Esperienze_Luoghi]);
       if (trip.Momenti_Da_Ricordare) memRows.push(["Momenti da Ricordare", trip.Momenti_Da_Ricordare]);
       if (trip.Link_Podcast) memRows.push(["Episodi Podcast", trip.Link_Podcast]);
       if (trip.Note_Varie || trip.Note_Preparazione) memRows.push(["Note e Riflessioni", trip.Note_Varie || trip.Note_Preparazione]);

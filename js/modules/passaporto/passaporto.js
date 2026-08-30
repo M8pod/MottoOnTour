@@ -81,8 +81,10 @@ const PassaportoModule = {
     const otherSouvenirs = [];
 
     const torriItems = [];
+    const parchiItems = [];
     const ruoteItems = [];
     const catCaffeItems = [];
+    const caffeStoriciItems = [];
     const otherExperiences = [];
 
     const tripsByYear = {};
@@ -212,6 +214,11 @@ const PassaportoModule = {
           torriItems.push({ item, tripName: t.Nome_Viaggio, tripId: t.ID_Viaggio, date: dLabel, timestamp: tripTime, stati: t.Stati, citta: t.Citta });
         });
       }
+      if (t.Esperienze_Parchi) {
+        String(t.Esperienze_Parchi).split('\n').map(s => s.trim()).filter(Boolean).forEach(item => {
+          parchiItems.push({ item, tripName: t.Nome_Viaggio, tripId: t.ID_Viaggio, date: dLabel, timestamp: tripTime, stati: t.Stati, citta: t.Citta });
+        });
+      }
       if (t.Esperienze_Ruote) {
         String(t.Esperienze_Ruote).split('\n').map(s => s.trim()).filter(Boolean).forEach(item => {
           ruoteItems.push({ item, tripName: t.Nome_Viaggio, tripId: t.ID_Viaggio, date: dLabel, timestamp: tripTime, stati: t.Stati, citta: t.Citta });
@@ -220,6 +227,11 @@ const PassaportoModule = {
       if (t.Esperienze_CatCaffe) {
         String(t.Esperienze_CatCaffe).split('\n').map(s => s.trim()).filter(Boolean).forEach(item => {
           catCaffeItems.push({ item, tripName: t.Nome_Viaggio, tripId: t.ID_Viaggio, date: dLabel, timestamp: tripTime, stati: t.Stati, citta: t.Citta });
+        });
+      }
+      if (t.Esperienze_CaffeStorici) {
+        String(t.Esperienze_CaffeStorici).split('\n').map(s => s.trim()).filter(Boolean).forEach(item => {
+          caffeStoriciItems.push({ item, tripName: t.Nome_Viaggio, tripId: t.ID_Viaggio, date: dLabel, timestamp: tripTime, stati: t.Stati, citta: t.Citta });
         });
       }
       if (t.Esperienze_Luoghi) {
@@ -245,8 +257,10 @@ const PassaportoModule = {
     sortByRecent(riproduzioniItems);
     sortByRecent(otherSouvenirs);
     sortByRecent(torriItems);
+    sortByRecent(parchiItems);
     sortByRecent(ruoteItems);
     sortByRecent(catCaffeItems);
+    sortByRecent(caffeStoriciItems);
     sortByRecent(otherExperiences);
 
     const visitedStatesCount = visitedStatesMap.size;
@@ -255,7 +269,7 @@ const PassaportoModule = {
     const worldPercentage = ((visitedStatesCount / totalCountries) * 100).toFixed(1).replace('.', ',');
     const geoStats = GeoUtils.computeGeoStats(coords);
 
-    // Giri della terra (40.075 km) e Distanza Terra-Luna (384.400 km)
+    // Giri della terra (40075 km) e Distanza Terra-Luna (384400 km)
     const earthCircumference = 40075;
     const moonDistance = 384400;
     const completedEarthLaps = Math.floor(totalKilometersTraveled / earthCircumference);
@@ -271,7 +285,8 @@ const PassaportoModule = {
     const top3IntenseTrips = rankedByIntensity.slice(0, 3);
     const bottom3IntenseTrips = [...rankedByIntensity].reverse().slice(0, 3);
 
-    // Calcolo Badge Progressivi Milestone (Punto 7)
+    // Calcolo Badge Progressivi Milestone (Punto 7 & Migliorie A-B)
+    // Ordine: Torri (5), Parchi (4), Ruote (5), Cat caffè (4), Caffè storici (5), Starbucks (10), Pandora (10), Riproduzioni (10)
     const computeMilestone = (count, stepSize) => {
       const level = Math.floor(count / stepSize);
       const nextMilestone = count >= 100 ? 100 : (level + 1) * stepSize;
@@ -281,12 +296,14 @@ const PassaportoModule = {
     };
 
     const badges = {
+      torri: computeMilestone(torriItems.length, 5),
+      parchi: computeMilestone(parchiItems.length, 4),
+      ruote: computeMilestone(ruoteItems.length, 5),
+      catCaffe: computeMilestone(catCaffeItems.length, 4),
+      caffeStorici: computeMilestone(caffeStoriciItems.length, 5),
       starbucks: computeMilestone(starbucksItems.length, 10),
       pandora: computeMilestone(pandoraItems.length, 10),
-      riproduzioni: computeMilestone(riproduzioniItems.length, 10),
-      torri: computeMilestone(torriItems.length, 5),
-      ruote: computeMilestone(ruoteItems.length, 5),
-      catCaffe: computeMilestone(catCaffeItems.length, 4)
+      riproduzioni: computeMilestone(riproduzioniItems.length, 10)
     };
 
     return {
@@ -315,8 +332,10 @@ const PassaportoModule = {
       riproduzioniItems,
       otherSouvenirs,
       torriItems,
+      parchiItems,
       ruoteItems,
       catCaffeItems,
+      caffeStoriciItems,
       otherExperiences,
       badges,
       totalDaysTraveled,
@@ -484,25 +503,25 @@ const PassaportoModule = {
             </div>
           </div>
 
-          <!-- BOX 2: GIRI DELLA TERRA (40.075 KM) -->
+          <!-- BOX 2: GIRI DELLA TERRA (40075 KM) -->
           <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 12px;">
-            <p style="color: #aaa; font-size: 0.85rem; margin: 0;">GIRI DELLA TERRA ALL'EQUATORE (40.075 KM)</p>
+            <p style="color: #aaa; font-size: 0.85rem; margin: 0;">GIRI DELLA TERRA ALL'EQUATORE (40075 KM)</p>
             <p class="stat-value" style="font-size: 1.4rem; margin: 4px 0;">
               🌐 ${stats.completedEarthLaps} ${stats.completedEarthLaps === 1 ? 'GIRO COMPLETATO' : 'GIRI COMPLETATI'}
             </p>
             <p style="color: var(--mint); font-size: 0.85rem; margin: 4px 0 6px 0;">
-              ${stats.currentEarthLapKm.toLocaleString('it-IT')} / 40.075 km verso il prossimo giro (${stats.earthLapPercent}%)
+              ${stats.currentEarthLapKm} / 40075 km verso il prossimo giro (${stats.earthLapPercent}%)
             </p>
             <div class="progress-container" style="height: 8px;">
               <div class="progress-fill" style="width: ${stats.earthLapPercent}%; background: var(--mint);"></div>
             </div>
           </div>
 
-          <!-- BOX 3: DISTANZA TERRA - LUNA (384.400 KM) -->
+          <!-- BOX 3: DISTANZA TERRA - LUNA (384400 KM) -->
           <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 12px;">
-            <p style="color: #aaa; font-size: 0.85rem; margin: 0;">DISTANZA VERSO LA LUNA (384.400 KM)</p>
+            <p style="color: #aaa; font-size: 0.85rem; margin: 0;">DISTANZA VERSO LA LUNA (384400 KM)</p>
             <p class="stat-value" style="font-size: 1.4rem; margin: 4px 0;">
-              🚀 ${stats.totalKilometersTraveled.toLocaleString('it-IT')} KM PERCORSI
+              🚀 ${stats.totalKilometersTraveled} KM PERCORSI
             </p>
             <p style="color: var(--pink-light); font-size: 0.85rem; margin: 4px 0 6px 0;">
               ${stats.moonPercent}% della distanza Terra-Luna coperta insieme!
@@ -514,7 +533,7 @@ const PassaportoModule = {
         </div>
       </section>
 
-      <!-- 2. SEZIONE BADGE MILESTONE PROGRESSIVI (PUNTO 7) -->
+      <!-- 2. SEZIONE BADGE MILESTONE PROGRESSIVI (PUNTO 7 & MIGLIORIE A-B) -->
       <section class="card" style="border: 2px solid var(--mint); background: rgba(0,255,163,0.04); margin-bottom: 20px;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
           <h2 style="margin: 0; color: var(--mint); border: none;">
@@ -524,58 +543,7 @@ const PassaportoModule = {
         </div>
 
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 14px;">
-          <!-- 1. STARBUCKS (ogni 10) -->
-          <div style="background: rgba(0,0,0,0.5); border: 1.5px solid ${b.starbucks.isSuper ? 'var(--mint)' : (b.starbucks.level > 0 ? 'var(--pink)' : 'rgba(255,255,255,0.15)')}; border-radius: 8px; padding: 12px;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-weight: 800; color: var(--mint); font-size: 1rem;">☕ Tazzine Starbucks</span>
-              <span style="background: ${b.starbucks.isSuper ? 'var(--mint)' : 'var(--pink)'}; color: #000; font-weight: 800; font-size: 0.75rem; padding: 2px 6px; border-radius: 6px;">
-                ${b.starbucks.isSuper ? '🌟 SUPER BADGE' : `LIV. ${b.starbucks.level}`}
-              </span>
-            </div>
-            <p class="stat-value" style="font-size: 1.3rem; margin: 6px 0;">${b.starbucks.count} tazzine</p>
-            <p style="color: #ccc; font-size: 0.8rem; margin: 0 0 6px 0;">
-              ${b.starbucks.isSuper ? 'Traguardo Centenario 100+ sbloccato!' : `Prossimo badge a ${b.starbucks.nextMilestone} tazzine (${b.starbucks.count % 10}/10)`}
-            </p>
-            <div class="progress-container" style="height: 6px;">
-              <div class="progress-fill" style="width: ${b.starbucks.progressPercent}%; background: var(--mint);"></div>
-            </div>
-          </div>
-
-          <!-- 2. PANDORA (ogni 10) -->
-          <div style="background: rgba(0,0,0,0.5); border: 1.5px solid ${b.pandora.isSuper ? 'var(--mint)' : (b.pandora.level > 0 ? 'var(--pink)' : 'rgba(255,255,255,0.15)')}; border-radius: 8px; padding: 12px;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-weight: 800; color: var(--pink); font-size: 1rem;">💎 Charm Pandora</span>
-              <span style="background: ${b.pandora.isSuper ? 'var(--mint)' : 'var(--pink)'}; color: #000; font-weight: 800; font-size: 0.75rem; padding: 2px 6px; border-radius: 6px;">
-                ${b.pandora.isSuper ? '🌟 SUPER BADGE' : `LIV. ${b.pandora.level}`}
-              </span>
-            </div>
-            <p class="stat-value" style="font-size: 1.3rem; margin: 6px 0;">${b.pandora.count} charm</p>
-            <p style="color: #ccc; font-size: 0.8rem; margin: 0 0 6px 0;">
-              ${b.pandora.isSuper ? 'Traguardo Centenario 100+ sbloccato!' : `Prossimo badge a ${b.pandora.nextMilestone} charm (${b.pandora.count % 10}/10)`}
-            </p>
-            <div class="progress-container" style="height: 6px;">
-              <div class="progress-fill" style="width: ${b.pandora.progressPercent}%; background: var(--pink);"></div>
-            </div>
-          </div>
-
-          <!-- 3. RIPRODUZIONI (ogni 10) -->
-          <div style="background: rgba(0,0,0,0.5); border: 1.5px solid ${b.riproduzioni.isSuper ? 'var(--mint)' : (b.riproduzioni.level > 0 ? 'var(--pink)' : 'rgba(255,255,255,0.15)')}; border-radius: 8px; padding: 12px;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-weight: 800; color: var(--mint); font-size: 1rem;">🏛️ Riproduzioni Storiche</span>
-              <span style="background: ${b.riproduzioni.isSuper ? 'var(--mint)' : 'var(--pink)'}; color: #000; font-weight: 800; font-size: 0.75rem; padding: 2px 6px; border-radius: 6px;">
-                ${b.riproduzioni.isSuper ? '🌟 SUPER BADGE' : `LIV. ${b.riproduzioni.level}`}
-              </span>
-            </div>
-            <p class="stat-value" style="font-size: 1.3rem; margin: 6px 0;">${b.riproduzioni.count} pezzi</p>
-            <p style="color: #ccc; font-size: 0.8rem; margin: 0 0 6px 0;">
-              ${b.riproduzioni.isSuper ? 'Traguardo Centenario 100+ sbloccato!' : `Prossimo badge a ${b.riproduzioni.nextMilestone} pezzi (${b.riproduzioni.count % 10}/10)`}
-            </p>
-            <div class="progress-container" style="height: 6px;">
-              <div class="progress-fill" style="width: ${b.riproduzioni.progressPercent}%; background: var(--mint);"></div>
-            </div>
-          </div>
-
-          <!-- 4. TORRI (ogni 5) -->
+          <!-- 1. TORRI (ogni 5) -->
           <div style="background: rgba(0,0,0,0.5); border: 1.5px solid ${b.torri.isSuper ? 'var(--mint)' : (b.torri.level > 0 ? 'var(--pink)' : 'rgba(255,255,255,0.15)')}; border-radius: 8px; padding: 12px;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <span style="font-weight: 800; color: var(--pink); font-size: 1rem;">🗼 Torri Panoramiche</span>
@@ -592,7 +560,24 @@ const PassaportoModule = {
             </div>
           </div>
 
-          <!-- 5. RUOTE (ogni 5) -->
+          <!-- 2. PARCHI TEMATICI (ogni 4) -->
+          <div style="background: rgba(0,0,0,0.5); border: 1.5px solid ${b.parchi.isSuper ? 'var(--mint)' : (b.parchi.level > 0 ? 'var(--mint)' : 'rgba(255,255,255,0.15)')}; border-radius: 8px; padding: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: 800; color: var(--mint); font-size: 1rem;">🎢 Parchi Tematici</span>
+              <span style="background: ${b.parchi.isSuper ? 'var(--mint)' : 'var(--mint)'}; color: #000; font-weight: 800; font-size: 0.75rem; padding: 2px 6px; border-radius: 6px;">
+                ${b.parchi.isSuper ? '🌟 SUPER BADGE' : `LIV. ${b.parchi.level}`}
+              </span>
+            </div>
+            <p class="stat-value" style="font-size: 1.3rem; margin: 6px 0;">${b.parchi.count} parchi</p>
+            <p style="color: #ccc; font-size: 0.8rem; margin: 0 0 6px 0;">
+              ${b.parchi.isSuper ? 'Traguardo Centenario 100+ sbloccato!' : `Prossimo badge a ${b.parchi.nextMilestone} parchi (${b.parchi.count % 4}/4)`}
+            </p>
+            <div class="progress-container" style="height: 6px;">
+              <div class="progress-fill" style="width: ${b.parchi.progressPercent}%; background: var(--mint);"></div>
+            </div>
+          </div>
+
+          <!-- 3. RUOTE (ogni 5) -->
           <div style="background: rgba(0,0,0,0.5); border: 1.5px solid ${b.ruote.isSuper ? 'var(--mint)' : (b.ruote.level > 0 ? 'var(--pink)' : 'rgba(255,255,255,0.15)')}; border-radius: 8px; padding: 12px;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <span style="font-weight: 800; color: var(--mint); font-size: 1rem;">🎡 Ruote Panoramiche</span>
@@ -609,7 +594,7 @@ const PassaportoModule = {
             </div>
           </div>
 
-          <!-- 6. CAT CAFFÈ (ogni 4) -->
+          <!-- 4. CAT CAFFÈ (ogni 4) -->
           <div style="background: rgba(0,0,0,0.5); border: 1.5px solid ${b.catCaffe.isSuper ? 'var(--mint)' : (b.catCaffe.level > 0 ? 'var(--pink)' : 'rgba(255,255,255,0.15)')}; border-radius: 8px; padding: 12px;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <span style="font-weight: 800; color: var(--pink); font-size: 1rem;">🐱 Cat Caffè</span>
@@ -623,6 +608,74 @@ const PassaportoModule = {
             </p>
             <div class="progress-container" style="height: 6px;">
               <div class="progress-fill" style="width: ${b.catCaffe.progressPercent}%; background: var(--pink);"></div>
+            </div>
+          </div>
+
+          <!-- 5. CAFFÈ STORICI (ogni 5) -->
+          <div style="background: rgba(0,0,0,0.5); border: 1.5px solid ${b.caffeStorici.isSuper ? 'var(--mint)' : (b.caffeStorici.level > 0 ? 'var(--mint)' : 'rgba(255,255,255,0.15)')}; border-radius: 8px; padding: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: 800; color: var(--mint); font-size: 1rem;">☕ Caffè Storici</span>
+              <span style="background: ${b.caffeStorici.isSuper ? 'var(--mint)' : 'var(--mint)'}; color: #000; font-weight: 800; font-size: 0.75rem; padding: 2px 6px; border-radius: 6px;">
+                ${b.caffeStorici.isSuper ? '🌟 SUPER BADGE' : `LIV. ${b.caffeStorici.level}`}
+              </span>
+            </div>
+            <p class="stat-value" style="font-size: 1.3rem; margin: 6px 0;">${b.caffeStorici.count} caffè storici</p>
+            <p style="color: #ccc; font-size: 0.8rem; margin: 0 0 6px 0;">
+              ${b.caffeStorici.isSuper ? 'Traguardo Centenario 100+ sbloccato!' : `Prossimo badge a ${b.caffeStorici.nextMilestone} caffè (${b.caffeStorici.count % 5}/5)`}
+            </p>
+            <div class="progress-container" style="height: 6px;">
+              <div class="progress-fill" style="width: ${b.caffeStorici.progressPercent}%; background: var(--mint);"></div>
+            </div>
+          </div>
+
+          <!-- 6. STARBUCKS (ogni 10) -->
+          <div style="background: rgba(0,0,0,0.5); border: 1.5px solid ${b.starbucks.isSuper ? 'var(--mint)' : (b.starbucks.level > 0 ? 'var(--pink)' : 'rgba(255,255,255,0.15)')}; border-radius: 8px; padding: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: 800; color: var(--pink); font-size: 1rem;">☕ Tazzine Starbucks</span>
+              <span style="background: ${b.starbucks.isSuper ? 'var(--mint)' : 'var(--pink)'}; color: #000; font-weight: 800; font-size: 0.75rem; padding: 2px 6px; border-radius: 6px;">
+                ${b.starbucks.isSuper ? '🌟 SUPER BADGE' : `LIV. ${b.starbucks.level}`}
+              </span>
+            </div>
+            <p class="stat-value" style="font-size: 1.3rem; margin: 6px 0;">${b.starbucks.count} tazzine</p>
+            <p style="color: #ccc; font-size: 0.8rem; margin: 0 0 6px 0;">
+              ${b.starbucks.isSuper ? 'Traguardo Centenario 100+ sbloccato!' : `Prossimo badge a ${b.starbucks.nextMilestone} tazzine (${b.starbucks.count % 10}/10)`}
+            </p>
+            <div class="progress-container" style="height: 6px;">
+              <div class="progress-fill" style="width: ${b.starbucks.progressPercent}%; background: var(--pink);"></div>
+            </div>
+          </div>
+
+          <!-- 7. PANDORA (ogni 10) -->
+          <div style="background: rgba(0,0,0,0.5); border: 1.5px solid ${b.pandora.isSuper ? 'var(--mint)' : (b.pandora.level > 0 ? 'var(--pink)' : 'rgba(255,255,255,0.15)')}; border-radius: 8px; padding: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: 800; color: var(--mint); font-size: 1rem;">💎 Charm Pandora</span>
+              <span style="background: ${b.pandora.isSuper ? 'var(--mint)' : 'var(--pink)'}; color: #000; font-weight: 800; font-size: 0.75rem; padding: 2px 6px; border-radius: 6px;">
+                ${b.pandora.isSuper ? '🌟 SUPER BADGE' : `LIV. ${b.pandora.level}`}
+              </span>
+            </div>
+            <p class="stat-value" style="font-size: 1.3rem; margin: 6px 0;">${b.pandora.count} charm</p>
+            <p style="color: #ccc; font-size: 0.8rem; margin: 0 0 6px 0;">
+              ${b.pandora.isSuper ? 'Traguardo Centenario 100+ sbloccato!' : `Prossimo badge a ${b.pandora.nextMilestone} charm (${b.pandora.count % 10}/10)`}
+            </p>
+            <div class="progress-container" style="height: 6px;">
+              <div class="progress-fill" style="width: ${b.pandora.progressPercent}%; background: var(--mint);"></div>
+            </div>
+          </div>
+
+          <!-- 8. RIPRODUZIONI (ogni 10) -->
+          <div style="background: rgba(0,0,0,0.5); border: 1.5px solid ${b.riproduzioni.isSuper ? 'var(--mint)' : (b.riproduzioni.level > 0 ? 'var(--pink)' : 'rgba(255,255,255,0.15)')}; border-radius: 8px; padding: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: 800; color: var(--pink); font-size: 1rem;">🏛️ Riproduzioni Storiche</span>
+              <span style="background: ${b.riproduzioni.isSuper ? 'var(--mint)' : 'var(--pink)'}; color: #000; font-weight: 800; font-size: 0.75rem; padding: 2px 6px; border-radius: 6px;">
+                ${b.riproduzioni.isSuper ? '🌟 SUPER BADGE' : `LIV. ${b.riproduzioni.level}`}
+              </span>
+            </div>
+            <p class="stat-value" style="font-size: 1.3rem; margin: 6px 0;">${b.riproduzioni.count} pezzi</p>
+            <p style="color: #ccc; font-size: 0.8rem; margin: 0 0 6px 0;">
+              ${b.riproduzioni.isSuper ? 'Traguardo Centenario 100+ sbloccato!' : `Prossimo badge a ${b.riproduzioni.nextMilestone} pezzi (${b.riproduzioni.count % 10}/10)`}
+            </p>
+            <div class="progress-container" style="height: 6px;">
+              <div class="progress-fill" style="width: ${b.riproduzioni.progressPercent}%; background: var(--pink);"></div>
             </div>
           </div>
         </div>
@@ -651,11 +704,11 @@ const PassaportoModule = {
         </button>
 
         <!-- 3. TRAGUARDI ED ESPLORAZIONI (ESPERIENZE) -->
-        <button type="button" class="card card-pink card-interactive card-btn" onclick="PassaportoModule.openCategory('traguardi_esplorazioni')" aria-label="Traguardi ed esplorazioni. Torri panoramiche, ruote panoramiche, cat caffè e attrazioni nel mondo. Apri traguardi ed esplorazioni.">
+        <button type="button" class="card card-pink card-interactive card-btn" onclick="PassaportoModule.openCategory('traguardi_esplorazioni')" aria-label="Traguardi ed esplorazioni. Torri panoramiche, parchi tematici, ruote panoramiche, cat caffè, caffè storici e attrazioni nel mondo. Apri traguardi ed esplorazioni.">
           <div aria-hidden="true">
             <h2 style="color: var(--pink); margin: 0; border: none;">✨ TRAGUARDI ED ESPLORAZIONI</h2>
             <p style="color: #ccc; margin-top: 6px;">
-              🗼 ${stats.torriItems.length} Torri Panoramiche | 🎡 ${stats.ruoteItems.length} Ruote Panoramiche | 🐱 ${stats.catCaffeItems.length} Cat Caffè | 🌟 Altre attrazioni
+              🗼 ${stats.torriItems.length} Torri | 🎢 ${stats.parchiItems.length} Parchi | 🎡 ${stats.ruoteItems.length} Ruote | 🐱 ${stats.catCaffeItems.length} Cat caffè | ☕ ${stats.caffeStoriciItems.length} Caffè storici | ✨ ${stats.otherExperiences.length} Altre attrazioni
             </p>
           </div>
         </button>
@@ -746,7 +799,7 @@ const PassaportoModule = {
                     <h3 style="color: #FFFFFF; margin: 6px 0 0 0; font-size: 1.2rem;">${t.Nome_Viaggio}</h3>
                     ${badgeLarge}
                     <p style="color: #ccc; font-size: 0.9rem; margin-top: 8px;">
-                      📅 <strong>${t.days} giorni</strong> (${dateText}) | 📍 <strong>${(t.Stati || '-').replace(/\n/g, ', ')}</strong> | 🚗 <strong>${t.km.toLocaleString('it-IT')} km</strong>
+                      📅 <strong>${t.days} giorni</strong> (${dateText}) | 📍 <strong>${(t.Stati || '-').replace(/\n/g, ', ')}</strong> | 🚗 <strong>${t.km} km</strong>
                     </p>
                     ${t.Citta ? `<p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;">Tappe: ${t.Citta.replace(/\n/g, ' ➔ ')}</p>` : ''}
                   </div>
@@ -808,7 +861,7 @@ const PassaportoModule = {
                     </div>
                   </div>
                   <p style="color: #ccc; font-size: 0.9rem; margin-top: 6px;">
-                    📅 ${t.days} giorni (${dateText}) | 📍 ${(t.Stati || '-').replace(/\n/g, ', ')} | 🚗 ${t.km.toLocaleString('it-IT')} km
+                    📅 ${t.days} giorni (${dateText}) | 📍 ${(t.Stati || '-').replace(/\n/g, ', ')} | 🚗 ${t.km} km
                   </p>
                   ${t.Citta ? `<p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;">Tappe: ${t.Citta.replace(/\n/g, ' ➔ ')}</p>` : ''}
                 </div>
@@ -980,21 +1033,46 @@ const PassaportoModule = {
         ` : `<p style="color: var(--text-muted); margin-top: 10px;">Nessuna torre panoramica registrata nei viaggi.</p>`}
       </section>
 
-      <!-- 2. RUOTE PANORAMICHE -->
+      <!-- 2. PARCHI TEMATICI -->
       <section class="card">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <h2 style="margin: 0; color: var(--mint); border: none;">🎡 RUOTE PANORAMICHE (${stats.ruoteItems.length})</h2>
+          <h2 style="margin: 0; color: var(--mint); border: none;">🎢 PARCHI TEMATICI (${stats.parchiItems.length})</h2>
           <span style="background: var(--mint); color: #000; font-weight: 800; font-size: 0.8rem; padding: 2px 8px; border-radius: 8px;">
+            ${stats.badges.parchi.isSuper ? '🌟 SUPER BADGE' : `LIV. ${stats.badges.parchi.level}`}
+          </span>
+        </div>
+        ${stats.parchiItems.length > 0 ? `
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-top: 12px;">
+            ${stats.parchiItems.map(it => `
+              <div class="card card-interactive" style="background: rgba(0,255,163,0.06); border: 1px solid var(--mint); border-radius: 8px; padding: 12px; margin: 0;">
+                <p style="font-weight: 700; color: #FFFFFF; margin: 0 0 6px 0; font-size: 1rem;">🎢 ${it.item}</p>
+                <p style="color: var(--pink-light); font-size: 0.85rem; margin: 0;">
+                  ✈️ <a href="javascript:void(0)" onclick="DiarioModule.openTripDetails('${it.tripId}', 'passaporto')" style="color: var(--pink-light); text-decoration: underline; font-weight: 700;">${it.tripName}</a>
+                </p>
+                <p style="color: #aaa; font-size: 0.8rem; margin: 4px 0 0 0;">
+                  📅 ${it.date || '-'}${it.stati ? ` | 📍 ${(it.stati || '').replace(/\n/g, ', ')}` : ''}
+                </p>
+              </div>
+            `).join('')}
+          </div>
+        ` : `<p style="color: var(--text-muted); margin-top: 10px;">Nessun parco tematico registrato nei viaggi.</p>`}
+      </section>
+
+      <!-- 3. RUOTE PANORAMICHE -->
+      <section class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h2 style="margin: 0; color: var(--pink); border: none;">🎡 RUOTE PANORAMICHE (${stats.ruoteItems.length})</h2>
+          <span style="background: var(--pink); color: #000; font-weight: 800; font-size: 0.8rem; padding: 2px 8px; border-radius: 8px;">
             ${stats.badges.ruote.isSuper ? '🌟 SUPER BADGE' : `LIV. ${stats.badges.ruote.level}`}
           </span>
         </div>
         ${stats.ruoteItems.length > 0 ? `
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-top: 12px;">
             ${stats.ruoteItems.map(it => `
-              <div class="card card-interactive" style="background: rgba(0,255,163,0.06); border: 1px solid var(--mint); border-radius: 8px; padding: 12px; margin: 0;">
+              <div class="card card-interactive" style="background: rgba(255,128,191,0.06); border: 1px solid var(--pink); border-radius: 8px; padding: 12px; margin: 0;">
                 <p style="font-weight: 700; color: #FFFFFF; margin: 0 0 6px 0; font-size: 1rem;">🎡 ${it.item}</p>
-                <p style="color: var(--pink-light); font-size: 0.85rem; margin: 0;">
-                  ✈️ <a href="javascript:void(0)" onclick="DiarioModule.openTripDetails('${it.tripId}', 'passaporto')" style="color: var(--pink-light); text-decoration: underline; font-weight: 700;">${it.tripName}</a>
+                <p style="color: var(--mint); font-size: 0.85rem; margin: 0;">
+                  ✈️ <a href="javascript:void(0)" onclick="DiarioModule.openTripDetails('${it.tripId}', 'passaporto')" style="color: var(--mint); text-decoration: underline; font-weight: 700;">${it.tripName}</a>
                 </p>
                 <p style="color: #aaa; font-size: 0.8rem; margin: 4px 0 0 0;">
                   📅 ${it.date || '-'}${it.stati ? ` | 📍 ${(it.stati || '').replace(/\n/g, ', ')}` : ''}
@@ -1005,21 +1083,21 @@ const PassaportoModule = {
         ` : `<p style="color: var(--text-muted); margin-top: 10px;">Nessuna ruota panoramica registrata nei viaggi.</p>`}
       </section>
 
-      <!-- 3. CAT CAFFÈ -->
+      <!-- 4. CAT CAFFÈ -->
       <section class="card">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <h2 style="margin: 0; color: var(--pink); border: none;">🐱 CAT CAFFÈ (${stats.catCaffeItems.length})</h2>
-          <span style="background: var(--pink); color: #000; font-weight: 800; font-size: 0.8rem; padding: 2px 8px; border-radius: 8px;">
+          <h2 style="margin: 0; color: var(--mint); border: none;">🐱 CAT CAFFÈ (${stats.catCaffeItems.length})</h2>
+          <span style="background: var(--mint); color: #000; font-weight: 800; font-size: 0.8rem; padding: 2px 8px; border-radius: 8px;">
             ${stats.badges.catCaffe.isSuper ? '🌟 SUPER BADGE' : `LIV. ${stats.badges.catCaffe.level}`}
           </span>
         </div>
         ${stats.catCaffeItems.length > 0 ? `
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-top: 12px;">
             ${stats.catCaffeItems.map(it => `
-              <div class="card card-interactive" style="background: rgba(255,128,191,0.06); border: 1px solid var(--pink); border-radius: 8px; padding: 12px; margin: 0;">
+              <div class="card card-interactive" style="background: rgba(0,255,163,0.06); border: 1px solid var(--mint); border-radius: 8px; padding: 12px; margin: 0;">
                 <p style="font-weight: 700; color: #FFFFFF; margin: 0 0 6px 0; font-size: 1rem;">🐱 ${it.item}</p>
-                <p style="color: var(--mint); font-size: 0.85rem; margin: 0;">
-                  ✈️ <a href="javascript:void(0)" onclick="DiarioModule.openTripDetails('${it.tripId}', 'passaporto')" style="color: var(--mint); text-decoration: underline; font-weight: 700;">${it.tripName}</a>
+                <p style="color: var(--pink-light); font-size: 0.85rem; margin: 0;">
+                  ✈️ <a href="javascript:void(0)" onclick="DiarioModule.openTripDetails('${it.tripId}', 'passaporto')" style="color: var(--pink-light); text-decoration: underline; font-weight: 700;">${it.tripName}</a>
                 </p>
                 <p style="color: #aaa; font-size: 0.8rem; margin: 4px 0 0 0;">
                   📅 ${it.date || '-'}${it.stati ? ` | 📍 ${(it.stati || '').replace(/\n/g, ', ')}` : ''}
@@ -1030,7 +1108,32 @@ const PassaportoModule = {
         ` : `<p style="color: var(--text-muted); margin-top: 10px;">Nessun cat caffè registrato nei viaggi.</p>`}
       </section>
 
-      <!-- 4. ALTRE ESPERIENZE E ATTRAZIONI -->
+      <!-- 5. CAFFÈ STORICI -->
+      <section class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h2 style="margin: 0; color: var(--pink); border: none;">☕ CAFFÈ STORICI (${stats.caffeStoriciItems.length})</h2>
+          <span style="background: var(--pink); color: #000; font-weight: 800; font-size: 0.8rem; padding: 2px 8px; border-radius: 8px;">
+            ${stats.badges.caffeStorici.isSuper ? '🌟 SUPER BADGE' : `LIV. ${stats.badges.caffeStorici.level}`}
+          </span>
+        </div>
+        ${stats.caffeStoriciItems.length > 0 ? `
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-top: 12px;">
+            ${stats.caffeStoriciItems.map(it => `
+              <div class="card card-interactive" style="background: rgba(255,128,191,0.06); border: 1px solid var(--pink); border-radius: 8px; padding: 12px; margin: 0;">
+                <p style="font-weight: 700; color: #FFFFFF; margin: 0 0 6px 0; font-size: 1rem;">☕ ${it.item}</p>
+                <p style="color: var(--mint); font-size: 0.85rem; margin: 0;">
+                  ✈️ <a href="javascript:void(0)" onclick="DiarioModule.openTripDetails('${it.tripId}', 'passaporto')" style="color: var(--mint); text-decoration: underline; font-weight: 700;">${it.tripName}</a>
+                </p>
+                <p style="color: #aaa; font-size: 0.8rem; margin: 4px 0 0 0;">
+                  📅 ${it.date || '-'}${it.stati ? ` | 📍 ${(it.stati || '').replace(/\n/g, ', ')}` : ''}
+                </p>
+              </div>
+            `).join('')}
+          </div>
+        ` : `<p style="color: var(--text-muted); margin-top: 10px;">Nessun caffè storico registrato nei viaggi.</p>`}
+      </section>
+
+      <!-- 6. ALTRE ESPERIENZE E ATTRAZIONI -->
       <section class="card">
         <h2>✨ ALTRE ESPERIENZE E ATTRAZIONI (${stats.otherExperiences.length})</h2>
         ${stats.otherExperiences.length > 0 ? `
@@ -1136,53 +1239,37 @@ const PassaportoModule = {
       <section class="card">
         <h2>RECORD GEOGRAFICI (RIFERIMENTO VENEZIA & POLI)</h2>
         <ul class="record-list" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;">
-          <li class="card" style="padding: 10px; margin: 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.12);" aria-label="Città più a Nord: ${geo.mostNorth ? `${geo.mostNorth.Citta} (${geo.mostNorth.Stato}) a latitudine ${geo.mostNorth.Latitudine} gradi` : 'In attesa del primo viaggio'}.">
-            <div aria-hidden="true">
-              <span style="color: var(--pink); font-weight: 700; font-size: 0.85rem; text-transform: uppercase; display: block;">CITTÀ PIÙ A NORD</span>
-              <span style="color: #FFFFFF; font-size: 1rem; margin-top: 4px; display: block;">${geo.mostNorth ? `📍 ${geo.mostNorth.Citta} (${geo.mostNorth.Stato}) [${geo.mostNorth.Latitudine}°]` : 'IN ATTESA DEL PRIMO VIAGGIO'}</span>
-            </div>
+          <li class="card" tabindex="0" style="padding: 12px; margin: 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.12);" aria-label="Città più a Nord: ${geo.mostNorth ? `${geo.mostNorth.Citta} (${geo.mostNorth.Stato}) a latitudine ${geo.mostNorth.Latitudine} gradi` : 'In attesa del primo viaggio'}.">
+            <span style="color: var(--pink); font-weight: 700; font-size: 0.85rem; text-transform: uppercase; display: block;">CITTÀ PIÙ A NORD</span>
+            <span style="color: #FFFFFF; font-size: 1rem; margin-top: 4px; display: block;">${geo.mostNorth ? `📍 ${geo.mostNorth.Citta} (${geo.mostNorth.Stato}) [${geo.mostNorth.Latitudine}°]` : 'IN ATTESA DEL PRIMO VIAGGIO'}</span>
           </li>
-          <li class="card" style="padding: 10px; margin: 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.12);" aria-label="Città più a Sud: ${geo.mostSouth ? `${geo.mostSouth.Citta} (${geo.mostSouth.Stato}) a latitudine ${geo.mostSouth.Latitudine} gradi` : 'In attesa del primo viaggio'}.">
-            <div aria-hidden="true">
-              <span style="color: var(--pink); font-weight: 700; font-size: 0.85rem; text-transform: uppercase; display: block;">CITTÀ PIÙ A SUD</span>
-              <span style="color: #FFFFFF; font-size: 1rem; margin-top: 4px; display: block;">${geo.mostSouth ? `📍 ${geo.mostSouth.Citta} (${geo.mostSouth.Stato}) [${geo.mostSouth.Latitudine}°]` : 'IN ATTESA DEL PRIMO VIAGGIO'}</span>
-            </div>
+          <li class="card" tabindex="0" style="padding: 12px; margin: 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.12);" aria-label="Città più a Sud: ${geo.mostSouth ? `${geo.mostSouth.Citta} (${geo.mostSouth.Stato}) a latitudine ${geo.mostSouth.Latitudine} gradi` : 'In attesa del primo viaggio'}.">
+            <span style="color: var(--pink); font-weight: 700; font-size: 0.85rem; text-transform: uppercase; display: block;">CITTÀ PIÙ A SUD</span>
+            <span style="color: #FFFFFF; font-size: 1rem; margin-top: 4px; display: block;">${geo.mostSouth ? `📍 ${geo.mostSouth.Citta} (${geo.mostSouth.Stato}) [${geo.mostSouth.Latitudine}°]` : 'IN ATTESA DEL PRIMO VIAGGIO'}</span>
           </li>
-          <li class="card" style="padding: 10px; margin: 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.12);" aria-label="Città più a Est: ${geo.mostEast ? `${geo.mostEast.Citta} (${geo.mostEast.Stato}) a longitudine ${geo.mostEast.Longitudine} gradi` : 'In attesa del primo viaggio'}.">
-            <div aria-hidden="true">
-              <span style="color: var(--pink); font-weight: 700; font-size: 0.85rem; text-transform: uppercase; display: block;">CITTÀ PIÙ A EST</span>
-              <span style="color: #FFFFFF; font-size: 1rem; margin-top: 4px; display: block;">${geo.mostEast ? `📍 ${geo.mostEast.Citta} (${geo.mostEast.Stato}) [${geo.mostEast.Longitudine}°]` : 'IN ATTESA DEL PRIMO VIAGGIO'}</span>
-            </div>
+          <li class="card" tabindex="0" style="padding: 12px; margin: 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.12);" aria-label="Città più a Est: ${geo.mostEast ? `${geo.mostEast.Citta} (${geo.mostEast.Stato}) a longitudine ${geo.mostEast.Longitudine} gradi` : 'In attesa del primo viaggio'}.">
+            <span style="color: var(--pink); font-weight: 700; font-size: 0.85rem; text-transform: uppercase; display: block;">CITTÀ PIÙ A EST</span>
+            <span style="color: #FFFFFF; font-size: 1rem; margin-top: 4px; display: block;">${geo.mostEast ? `📍 ${geo.mostEast.Citta} (${geo.mostEast.Stato}) [${geo.mostEast.Longitudine}°]` : 'IN ATTESA DEL PRIMO VIAGGIO'}</span>
           </li>
-          <li class="card" style="padding: 10px; margin: 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.12);" aria-label="Città più a Ovest: ${geo.mostWest ? `${geo.mostWest.Citta} (${geo.mostWest.Stato}) a longitudine ${geo.mostWest.Longitudine} gradi` : 'In attesa del primo viaggio'}.">
-            <div aria-hidden="true">
-              <span style="color: var(--pink); font-weight: 700; font-size: 0.85rem; text-transform: uppercase; display: block;">CITTÀ PIÙ A OVEST</span>
-              <span style="color: #FFFFFF; font-size: 1rem; margin-top: 4px; display: block;">${geo.mostWest ? `📍 ${geo.mostWest.Citta} (${geo.mostWest.Stato}) [${geo.mostWest.Longitudine}°]` : 'IN ATTESA DEL PRIMO VIAGGIO'}</span>
-            </div>
+          <li class="card" tabindex="0" style="padding: 12px; margin: 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.12);" aria-label="Città più a Ovest: ${geo.mostWest ? `${geo.mostWest.Citta} (${geo.mostWest.Stato}) a longitudine ${geo.mostWest.Longitudine} gradi` : 'In attesa del primo viaggio'}.">
+            <span style="color: var(--pink); font-weight: 700; font-size: 0.85rem; text-transform: uppercase; display: block;">CITTÀ PIÙ A OVEST</span>
+            <span style="color: #FFFFFF; font-size: 1rem; margin-top: 4px; display: block;">${geo.mostWest ? `📍 ${geo.mostWest.Citta} (${geo.mostWest.Stato}) [${geo.mostWest.Longitudine}°]` : 'IN ATTESA DEL PRIMO VIAGGIO'}</span>
           </li>
-          <li class="card" style="padding: 10px; margin: 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.12);" aria-label="Città più lontana da Venezia: ${geo.farthestFromVenice ? `${geo.farthestFromVenice.Citta} (${geo.farthestFromVenice.distFromVenice} km in linea d'aria)` : 'In attesa del primo viaggio'}.">
-            <div aria-hidden="true">
-              <span style="color: var(--pink); font-weight: 700; font-size: 0.85rem; text-transform: uppercase; display: block;">PIÙ LONTANA DA VENEZIA</span>
-              <span style="color: #FFFFFF; font-size: 1rem; margin-top: 4px; display: block;">${geo.farthestFromVenice ? `✈️ ${geo.farthestFromVenice.Citta} (${geo.farthestFromVenice.distFromVenice} km in linea d'aria)` : 'IN ATTESA DEL PRIMO VIAGGIO'}</span>
-            </div>
+          <li class="card" tabindex="0" style="padding: 12px; margin: 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.12);" aria-label="Città più lontana da Venezia: ${geo.farthestFromVenice ? `${geo.farthestFromVenice.Citta} (${geo.farthestFromVenice.distFromVenice} km in linea d'aria)` : 'In attesa del primo viaggio'}.">
+            <span style="color: var(--pink); font-weight: 700; font-size: 0.85rem; text-transform: uppercase; display: block;">PIÙ LONTANA DA VENEZIA</span>
+            <span style="color: #FFFFFF; font-size: 1rem; margin-top: 4px; display: block;">${geo.farthestFromVenice ? `✈️ ${geo.farthestFromVenice.Citta} (${geo.farthestFromVenice.distFromVenice} km in linea d'aria)` : 'IN ATTESA DEL PRIMO VIAGGIO'}</span>
           </li>
-          <li class="card" style="padding: 10px; margin: 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.12);" aria-label="Città più vicine all'Equatore: ${geo.closestToEquator.length > 0 ? geo.closestToEquator.map((c, i) => `${i + 1}. ${c.Citta} (${c.Stato}) a latitudine ${c.Latitudine} gradi`).join(', ') : 'In attesa del primo viaggio'}.">
-            <div aria-hidden="true">
-              <span style="color: var(--pink); font-weight: 700; font-size: 0.85rem; text-transform: uppercase; display: block;">PIÙ VICINE ALL'EQUATORE</span>
-              <span style="color: #FFFFFF; font-size: 1rem; margin-top: 4px; display: block;">${geo.closestToEquator.length > 0 ? geo.closestToEquator.map((c, i) => `🌍 ${i + 1}. ${c.Citta} (${c.Stato}) [${c.Latitudine}°]`).join('<br>') : 'IN ATTESA DEL PRIMO VIAGGIO'}</span>
-            </div>
+          <li class="card" tabindex="0" style="padding: 12px; margin: 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.12);" aria-label="Città più vicine all'Equatore: ${geo.closestToEquator.length > 0 ? geo.closestToEquator.map((c, i) => `${i + 1}. ${c.Citta} (${c.Stato}) a latitudine ${c.Latitudine} gradi`).join(', ') : 'In attesa del primo viaggio'}.">
+            <span style="color: var(--pink); font-weight: 700; font-size: 0.85rem; text-transform: uppercase; display: block;">PIÙ VICINE ALL'EQUATORE</span>
+            <span style="color: #FFFFFF; font-size: 1rem; margin-top: 4px; display: block;">${geo.closestToEquator.length > 0 ? geo.closestToEquator.map((c, i) => `🌍 ${i + 1}. ${c.Citta} (${c.Stato}) [${c.Latitudine}°]`).join('<br>') : 'IN ATTESA DEL PRIMO VIAGGIO'}</span>
           </li>
-          <li class="card" style="padding: 10px; margin: 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.12);" aria-label="Prime 3 città più vicine al Polo Nord: ${geo.closestToNorthPole.length > 0 ? geo.closestToNorthPole.map((c, i) => `${i + 1}. ${c.Citta} (${c.Stato}), ${c.distNorthPoleKm} km dal Polo`).join(', ') : 'In attesa del primo viaggio'}.">
-            <div aria-hidden="true">
-              <span style="color: var(--pink); font-weight: 700; font-size: 0.85rem; text-transform: uppercase; display: block;">PRIME 3 PIÙ VICINE AL POLO NORD</span>
-              <span style="color: #FFFFFF; font-size: 1rem; margin-top: 4px; display: block;">${geo.closestToNorthPole.length > 0 ? geo.closestToNorthPole.map((c, i) => `❄️ ${i + 1}. ${c.Citta} (${c.Stato}) [${c.Latitudine}°N - ${c.distNorthPoleKm} km dal Polo]`).join('<br>') : 'IN ATTESA DEL PRIMO VIAGGIO'}</span>
-            </div>
+          <li class="card" tabindex="0" style="padding: 12px; margin: 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.12);" aria-label="Prime 3 città più vicine al Polo Nord: ${geo.closestToNorthPole.length > 0 ? geo.closestToNorthPole.map((c, i) => `${i + 1}. ${c.Citta} (${c.Stato}), ${c.distNorthPoleKm} km dal Polo`).join(', ') : 'In attesa del primo viaggio'}.">
+            <span style="color: var(--pink); font-weight: 700; font-size: 0.85rem; text-transform: uppercase; display: block;">PRIME 3 PIÙ VICINE AL POLO NORD</span>
+            <span style="color: #FFFFFF; font-size: 1rem; margin-top: 4px; display: block;">${geo.closestToNorthPole.length > 0 ? geo.closestToNorthPole.map((c, i) => `❄️ ${i + 1}. ${c.Citta} (${c.Stato}) [${c.Latitudine}°N - ${c.distNorthPoleKm} km dal Polo]`).join('<br>') : 'IN ATTESA DEL PRIMO VIAGGIO'}</span>
           </li>
-          <li class="card" style="padding: 10px; margin: 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.12);" aria-label="Prime 3 città più vicine al Polo Sud: ${geo.closestToSouthPole.length > 0 ? geo.closestToSouthPole.map((c, i) => `${i + 1}. ${c.Citta} (${c.Stato}), ${c.distSouthPoleKm} km dal Polo`).join(', ') : 'In attesa del primo viaggio'}.">
-            <div aria-hidden="true">
-              <span style="color: var(--pink); font-weight: 700; font-size: 0.85rem; text-transform: uppercase; display: block;">PRIME 3 PIÙ VICINE AL POLO SUD</span>
-              <span style="color: #FFFFFF; font-size: 1rem; margin-top: 4px; display: block;">${geo.closestToSouthPole.length > 0 ? geo.closestToSouthPole.map((c, i) => `❄️ ${i + 1}. ${c.Citta} (${c.Stato}) [${c.Latitudine}° - ${c.distSouthPoleKm} km dal Polo]`).join('<br>') : 'IN ATTESA DEL PRIMO VIAGGIO'}</span>
-            </div>
+          <li class="card" tabindex="0" style="padding: 12px; margin: 0; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.12);" aria-label="Prime 3 città più vicine al Polo Sud: ${geo.closestToSouthPole.length > 0 ? geo.closestToSouthPole.map((c, i) => `${i + 1}. ${c.Citta} (${c.Stato}), ${c.distSouthPoleKm} km dal Polo`).join(', ') : 'In attesa del primo viaggio'}.">
+            <span style="color: var(--pink); font-weight: 700; font-size: 0.85rem; text-transform: uppercase; display: block;">PRIME 3 PIÙ VICINE AL POLO SUD</span>
+            <span style="color: #FFFFFF; font-size: 1rem; margin-top: 4px; display: block;">${geo.closestToSouthPole.length > 0 ? geo.closestToSouthPole.map((c, i) => `❄️ ${i + 1}. ${c.Citta} (${c.Stato}) [${c.Latitudine}° - ${c.distSouthPoleKm} km dal Polo]`).join('<br>') : 'IN ATTESA DEL PRIMO VIAGGIO'}</span>
           </li>
         </ul>
       </section>
@@ -1268,10 +1355,15 @@ const PassaportoModule = {
               </tr>
             </thead>
             <tbody>
-              ${Object.entries(stats.transportCounts).map(([m, cnt]) => {
-                const pct = stats.totalTrips > 0 ? ((cnt / stats.totalTrips) * 100).toFixed(0) : '0';
-                return `<tr><th scope="row">${m}</th><td>${cnt}</td><td>${pct}%</td></tr>`;
-              }).join('')}
+              ${(() => {
+                const totalUses = Object.values(stats.transportCounts).reduce((a, b) => a + b, 0);
+                return Object.entries(stats.transportCounts)
+                  .sort((a, b) => b[1] - a[1])
+                  .map(([m, cnt]) => {
+                    const pct = totalUses > 0 ? ((cnt / totalUses) * 100).toFixed(0) : '0';
+                    return `<tr><th scope="row">${m}</th><td>${cnt}</td><td>${pct}%</td></tr>`;
+                  }).join('');
+              })()}
             </tbody>
           </table>
         </div>
@@ -1279,10 +1371,10 @@ const PassaportoModule = {
 
       <!-- 3. COMPAGNIE E VETTORI -->
       <section class="card">
-        <h2>COMPAGNIE E VETTORI UTILIZZATI (${stats.carriersSet.size})</h2>
+        <h2>✈️ COMPAGNIE E VETTORI UTILIZZATI (${stats.carriersSet.size})</h2>
         <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;">
           ${Array.from(stats.carriersSet).sort().map(car => `
-            <span class="btn btn-sm btn-pink" style="pointer-events: none;">✈️ ${car}</span>
+            <span class="btn btn-sm btn-pink" style="pointer-events: none;">${car}</span>
           `).join('')}
         </div>
       </section>
@@ -1472,7 +1564,7 @@ const PassaportoModule = {
           totalSpend: stats.totalSpend.toLocaleString('it-IT'),
           totalSouvenirs: stats.totalSouvenirs,
           totalDaysTraveled: stats.totalDaysTraveled,
-          totalKilometersTraveled: stats.totalKilometersTraveled.toLocaleString('it-IT'),
+          totalKilometersTraveled: String(stats.totalKilometersTraveled),
           completedEarthLaps: stats.completedEarthLaps,
           earthLapPercent: stats.earthLapPercent,
           moonPercent: stats.moonPercent,

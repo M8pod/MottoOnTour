@@ -84,6 +84,9 @@ const ImpostazioniModule = {
         </div>
 
         <div style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
+          <button class="btn btn-sm btn-primary" onclick="ImpostazioniModule.forceSyncDiarioToCloud()">
+            <span aria-hidden="true">☁️ </span>FORZA CARICAMENTO DIARIO SU GOOGLE DRIVE
+          </button>
           <button class="btn btn-sm btn-primary" onclick="ImpostazioniModule.testDriveConnection()">
             <span aria-hidden="true">⚡ </span>TEST CONNESSIONE GOOGLE DRIVE
           </button>
@@ -270,6 +273,23 @@ const ImpostazioniModule = {
       }
     };
     reader.readAsText(file);
+  },
+
+  async forceSyncDiarioToCloud() {
+    App.notify("Sincronizzazione di tutti i viaggi su Google Drive in corso...");
+    try {
+      const res = await API.syncAllLocalTripsToCloud();
+      if (res && res.success) {
+        SoundFX.playConfirm();
+        App.notify(`Sincronizzazione completata! ${res.count} viaggi aggiornati su Google Drive.`);
+      } else {
+        SoundFX.playAlert();
+        App.notify("Errore durante la sincronizzazione su Google Drive.");
+      }
+    } catch (e) {
+      SoundFX.playAlert();
+      App.notify("Errore di connessione a Google Drive.");
+    }
   },
 
   openMiniManuale() {
