@@ -160,7 +160,7 @@ const API = {
         ) {
           ruo.push(line);
         } else if (
-          has(line, 'cat caffe', 'neko', 'gatti') ||
+          has(line, 'cat caffe', 'cat cafe', 'neko cafe', 'neko caffe', 'caffe dei gatti', 'cafe dei gatti', 'bar dei gatti') ||
           low.includes('[catcaffe]')
         ) {
           cat.push(line);
