@@ -54,9 +54,10 @@ const PassaportoModule = {
   },
 
   getAggregatedData() {
-    if (typeof API !== 'undefined' && API.normalizeAllTripsData) {
-      API.normalizeAllTripsData();
-    }
+    // Nota: non richiamare API.normalizeAllTripsData() qui. I viaggi in API.data sono
+    // già normalizzati al momento del caricamento/sync (API.init/fetchAllData) e del
+    // salvataggio (API.saveRecord): rifarlo ad ogni render di questa schermata di sola
+    // lettura muterebbe silenziosamente i dati in memoria senza alcuna azione dell'utente.
     const trips = API.data[CONFIG.SHEETS.DIARIO] || [];
     const coords = API.data[CONFIG.SHEETS.COORDINATE] || [];
 

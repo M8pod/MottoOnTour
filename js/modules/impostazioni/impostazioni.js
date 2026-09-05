@@ -6,6 +6,7 @@ const ImpostazioniModule = {
   render(container) {
     const isOnline = navigator.onLine;
     const lastSync = API.lastSyncTime ? API.lastSyncTime.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : 'Mai';
+    const pendingSync = (API.syncQueue && API.syncQueue.length) || 0;
     const requirePinAlways = localStorage.getItem('motto_require_pin_always') === 'true';
     const autoSyncOnStart = localStorage.getItem('motto_auto_sync') !== 'false';
     const soundEnabled = localStorage.getItem('motto_sound_enabled') !== 'false';
@@ -72,9 +73,15 @@ const ImpostazioniModule = {
       <section class="card">
         <h2>GRUPPO 3: SINCRONIZZAZIONE E CONNESSIONE CLOUD</h2>
         <p style="color: #ccc;">
-          Stato Connessione: <strong style="color: ${isOnline ? 'var(--mint)' : 'var(--danger)'};">${isOnline ? 'ONLINE' : 'OFFLINE'}</strong> | 
+          Stato Connessione: <strong style="color: ${isOnline ? 'var(--mint)' : 'var(--danger)'};">${isOnline ? 'ONLINE' : 'OFFLINE'}</strong> |
           Ultima Sincronizzazione: <strong style="color: var(--mint);">${lastSync}</strong>
         </p>
+
+        ${pendingSync > 0 ? `
+        <p role="status" style="color: var(--pink-light); background: rgba(255,128,191,0.08); border: 1px solid var(--pink); border-radius: 6px; padding: 8px 10px; margin-top: 10px;">
+          <span aria-hidden="true">⏳ </span>${pendingSync} modifica${pendingSync === 1 ? '' : 'he'} non ancora sincronizzata${pendingSync === 1 ? '' : 'e'} con Google Drive. Verrà${pendingSync === 1 ? '' : 'anno'} ritentata${pendingSync === 1 ? '' : 'e'} automaticamente, oppure puoi forzarla subito qui sotto.
+        </p>
+        ` : ''}
 
         <div class="checkbox-group" style="margin: 12px 0;">
           <label class="checkbox-item">
@@ -84,6 +91,11 @@ const ImpostazioniModule = {
         </div>
 
         <div style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
+          ${pendingSync > 0 ? `
+          <button class="btn btn-sm btn-pink" onclick="ImpostazioniModule.retryPendingSync()">
+            <span aria-hidden="true">🔁 </span>RIPROVA SINCRONIZZAZIONE (${pendingSync})
+          </button>
+          ` : ''}
           <button class="btn btn-sm btn-primary" onclick="ImpostazioniModule.forceSyncDiarioToCloud()">
             <span aria-hidden="true">☁️ </span>FORZA CARICAMENTO DIARIO SU GOOGLE DRIVE
           </button>
@@ -205,6 +217,24 @@ const ImpostazioniModule = {
     localStorage.setItem('motto_sound_enabled', checked);
     if (checked) SoundFX.playConfirm();
     App.notify(`Effetti sonori: ${checked ? 'ABILITATI' : 'DISABILITATI'}`);
+  },
+
+  async retryPendingSync() {
+    const before = (API.syncQueue && API.syncQueue.length) || 0;
+    App.notify("Ritento la sincronizzazione delle modifiche in sospeso...");
+    await API.flushSyncQueue();
+    const after = (API.syncQueue && API.syncQueue.length) || 0;
+    if (after === 0) {
+      SoundFX.playConfirm();
+      App.notify("Tutte le modifiche in sospeso sono state sincronizzate con Google Drive!");
+    } else if (after < before) {
+      SoundFX.playConfirm();
+      App.notify(`Sincronizzate ${before - after} modifiche. ${after} restano in attesa: riprova più tardi.`);
+    } else {
+      SoundFX.playAlert();
+      App.notify("Impossibile sincronizzare al momento. Verrà ritentato automaticamente più tardi.");
+    }
+    App.render();
   },
 
   async testDriveConnection() {

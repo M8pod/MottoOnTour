@@ -657,7 +657,16 @@ const GeoUtils = {
     else score += 1.0;
 
     // 4. Souvenir e Memorie/Esperienze registrate (max 2.0 punti)
-    const souvenirs = String(trip.Souvenir || '').split('\n').map(s => s.trim()).filter(Boolean);
+    // Conta gli oggetti souvenir dai campi dedicati (Starbucks/Pandora/Riproduzioni/Altri),
+    // la stessa fonte canonica usata da "Il mio Passaporto" per i badge: evita di ricontare
+    // se il campo legacy "Souvenir" (aggregato di comodo) e i campi dedicati divergono.
+    const souvenirsSource = [
+      trip.Souvenir_Starbucks,
+      trip.Souvenir_Pandora,
+      trip.Souvenir_Riproduzioni,
+      (trip.Souvenir_Altri !== undefined ? trip.Souvenir_Altri : trip.Souvenir)
+    ].filter(Boolean).join('\n');
+    const souvenirs = souvenirsSource.split('\n').map(s => s.trim()).filter(Boolean);
     const hasDrive = Boolean(trip.Link_Cartella_Drive && trip.Link_Cartella_Drive.trim().length > 5);
     const hasNotes = Boolean(trip.Attivita_Esperienze || trip.Note_Personali || trip.Note_Consigli || trip.Esperienze_Luoghi || trip.Note_Varie);
     if (souvenirs.length >= 4) score += 1.0;

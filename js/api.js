@@ -2,6 +2,21 @@
 // MOTTO ON TOUR - API & DATABASE MANAGEMENT LAYER
 // ==========================================================================
 
+// Rimuove gli accenti (è->e, à->a, ecc.) per un confronto insensibile alle variazioni ortografiche
+function stripAccents(str) {
+  return String(str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+// Verifica che "term" compaia in "text" come parola/frase intera, non come sottostringa
+// di un'altra parola (es. "torre" non deve far scattare un match dentro "torrefazione")
+function containsWholeTerm(text, term) {
+  const cleanText = stripAccents(text).toLowerCase();
+  const cleanTerm = stripAccents(term).toLowerCase();
+  const escaped = cleanTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp('(^|[^a-z0-9])' + escaped + '($|[^a-z0-9])');
+  return re.test(cleanText);
+}
+
 const API = {
   data: {
     "Diario di bordo": [],
@@ -36,11 +51,24 @@ const API = {
         const parsed = JSON.parse(local);
         this.data = { ...this.data, ...parsed };
         this.normalizeAllDataDates();
-        this.normalizeAllTripsData();
         const savedSync = localStorage.getItem('motto_last_sync');
         if (savedSync) this.lastSyncTime = new Date(savedSync);
       } catch (e) {}
     }
+
+    // Load any sync operations that failed to reach the cloud in a previous session
+    const savedQueue = localStorage.getItem('motto_sync_queue');
+    if (savedQueue) {
+      try {
+        this.syncQueue = JSON.parse(savedQueue) || [];
+      } catch (e) {
+        this.syncQueue = [];
+      }
+    }
+    if (this.isOnline && this.syncQueue.length > 0) {
+      this.flushSyncQueue();
+    }
+
     // Load custom geocoded cities cache
     if (typeof GeoUtils !== 'undefined' && GeoUtils.initCustomCitiesCache) {
       GeoUtils.initCustomCitiesCache();
@@ -65,15 +93,15 @@ const API = {
     if (!hasDedicatedSouv && souvLines.length > 0) {
       const sb = [], pan = [], rip = [], oth = [];
       souvLines.forEach(line => {
-        const low = line.toLowerCase();
-        if (low.includes('starbucks') || low.includes('[starbucks]')) {
+        if (containsWholeTerm(line, 'starbucks') || line.includes('[starbucks]')) {
           sb.push(line);
-        } else if (low.includes('charm') || low.includes('pandora') || low.includes('[pandora]')) {
+        } else if (containsWholeTerm(line, 'charm') || containsWholeTerm(line, 'pandora') || line.includes('[pandora]')) {
           pan.push(line);
         } else if (
-          low.includes('riproduzion') || low.includes('modellin') ||
-          low.includes('miniatura') || low.includes('statuina') ||
-          low.includes('[riproduzioni]')
+          containsWholeTerm(line, 'riproduzione') || containsWholeTerm(line, 'riproduzioni') ||
+          containsWholeTerm(line, 'modellino') || containsWholeTerm(line, 'modellini') ||
+          containsWholeTerm(line, 'miniatura') || containsWholeTerm(line, 'statuina') ||
+          line.includes('[riproduzioni]')
         ) {
           rip.push(line);
         } else {
@@ -113,36 +141,33 @@ const API = {
 
     if (!hasDedicatedEsp && espLines.length > 0) {
       const tor = [], par = [], ruo = [], cat = [], caf = [], oth = [];
+      const has = (line, ...terms) => terms.some(t => containsWholeTerm(line, t));
       espLines.forEach(line => {
         const low = line.toLowerCase();
         if (
-          low.includes('torre') || low.includes('tower') || low.includes('skytree') ||
-          low.includes('sky tree') || low.includes('torri') || low.includes('burji kalifa') ||
-          low.includes('burj khalifa') || low.includes('[torri]')
+          has(line, 'torre', 'torri', 'tower', 'skytree', 'sky tree', 'burji kalifa', 'burj khalifa') ||
+          low.includes('[torri]')
         ) {
           tor.push(line);
         } else if (
-          low.includes('parco') || low.includes('parchi') || low.includes('disneyland') ||
-          low.includes('disney') || low.includes('gardaland') || low.includes('studios') ||
-          low.includes('universal') || low.includes('mirabilandia') || low.includes('portaventura') ||
-          low.includes('europa park') || low.includes('[parchi]')
+          has(line, 'parco', 'parchi', 'disneyland', 'disney', 'gardaland', 'studios', 'universal', 'mirabilandia', 'portaventura', 'europa park') ||
+          low.includes('[parchi]')
         ) {
           par.push(line);
         } else if (
-          low.includes('ruota') || low.includes('ruote') || low.includes('eye') ||
-          low.includes('roller') || low.includes('ferris') || low.includes('[ruote]')
+          has(line, 'ruota', 'ruote', 'ferris', 'london eye', 'high roller') ||
+          low.includes('[ruote]')
         ) {
           ruo.push(line);
         } else if (
-          low.includes('cat caff') || low.includes('cat caf') || low.includes('neko') ||
-          low.includes('gatti') || low.includes('[catcaffe]')
+          has(line, 'cat caffe', 'neko', 'gatti') ||
+          low.includes('[catcaffe]')
         ) {
           cat.push(line);
         } else if (
-          (low.includes('caffè') || low.includes('caffe') || low.includes('florian') ||
-           low.includes('greco') || low.includes('central') || low.includes('van gogh') ||
-           low.includes('zaker') || low.includes('sacher') || low.includes('[caffestorici]')) &&
-          !low.includes('starbucks')
+          (has(line, 'caffe', 'florian', 'caffe greco', 'cafe central', 'caffe central', 'van gogh', 'zaker', 'sacher') ||
+           low.includes('[caffestorici]')) &&
+          !containsWholeTerm(line, 'starbucks')
         ) {
           caf.push(line);
         } else {
@@ -235,6 +260,25 @@ const API = {
     } catch (e) {}
   },
 
+  // Persiste la coda delle sincronizzazioni cloud non ancora andate a buon fine,
+  // cosicché sopravviva alla chiusura dell'app e venga ritentata al prossimo avvio/online
+  saveSyncQueue() {
+    try {
+      localStorage.setItem('motto_sync_queue', JSON.stringify(this.syncQueue));
+    } catch (e) {}
+  },
+
+  // Accoda un'operazione di sincronizzazione cloud fallita per ritentarla più tardi
+  enqueueSync(action, payload) {
+    this.syncQueue.push({
+      id: 'Q_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+      action,
+      payload,
+      queuedAt: new Date().toISOString()
+    });
+    this.saveSyncQueue();
+  },
+
   async request(action, payload = {}, isGet = false) {
     const pin = localStorage.getItem('motto_pin') || CONFIG.SECRET_PIN;
     
@@ -288,6 +332,12 @@ const API = {
       this.normalizeAllDataDates();
       await this.repairCachedCoordinates();
       return this.data;
+    }
+
+    // Ogni fetch (avvio, sblocco PIN, ripresa app) è anche un'occasione per ritentare
+    // eventuali salvataggi cloud rimasti in sospeso da una sessione precedente
+    if (navigator.onLine) {
+      this.flushSyncQueue();
     }
 
     try {
@@ -412,8 +462,11 @@ const API = {
         this.saveLocalCache();
         return { success: true, record: res.record || record };
       }
+      console.warn("Cloud save rejected by server, queued locally:", res && res.message);
+      this.enqueueSync('saveRecord', { sheetName, record, idKey });
     } catch (e) {
       console.warn("Cloud save failed, queued locally:", e);
+      this.enqueueSync('saveRecord', { sheetName, record, idKey });
     }
     return { success: true, record, offline: true };
   },
@@ -618,8 +671,34 @@ const API = {
     this.saveRecord(sheetName, record, idKey);
   },
 
-  flushSyncQueue() {
-    // Reserved for offline reconciliation
+  // Ritenta in ordine (FIFO) tutte le operazioni cloud rimaste in sospeso. Si ferma al
+  // primo fallimento per non martellare il backend quando è irraggiungibile: verrà
+  // ritentato al prossimo evento 'online' o al prossimo avvio/fetchAllData.
+  async flushSyncQueue() {
+    if (this._flushingSyncQueue) return;
+    if (!navigator.onLine || this.syncQueue.length === 0) return;
+
+    this._flushingSyncQueue = true;
+    try {
+      while (this.syncQueue.length > 0) {
+        const item = this.syncQueue[0];
+        try {
+          const res = await this.request(item.action, item.payload);
+          if (res && res.status === 'success') {
+            this.syncQueue.shift();
+            this.saveSyncQueue();
+            this.lastSyncTime = new Date();
+            this.saveLocalCache();
+          } else {
+            break;
+          }
+        } catch (e) {
+          break;
+        }
+      }
+    } finally {
+      this._flushingSyncQueue = false;
+    }
   },
 
   // Forza la sincronizzazione di tutti i viaggi del Diario di bordo verso Google Drive
