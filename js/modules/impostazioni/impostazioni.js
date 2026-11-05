@@ -24,7 +24,7 @@ const ImpostazioniModule = {
       <section class="card">
         <h2>GRUPPO 1: SICUREZZA E CONTROLLO PIN UNICO</h2>
         <p style="color: #ccc; margin-bottom: 12px;">
-          L'accesso all'applicazione è protetto dal codice PIN segreto condiviso (<strong>211221</strong>).
+          L'accesso all'applicazione è protetto dal codice PIN segreto condiviso. Il PIN non è scritto da nessuna parte nell'app: va ricordato.
         </p>
 
         <div class="checkbox-group">
