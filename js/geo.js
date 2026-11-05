@@ -167,6 +167,8 @@ const CITIES_DB = {
   "ARRECIFE": { lat: 28.9630, lng: -13.5477, stato: "SPAGNA", continente: "Europa" },
   "PUERTO DEL ROSARIO": { lat: 28.5004, lng: -13.8627, stato: "SPAGNA", continente: "Europa" },
   "PALMA DI MAIORCA": { lat: 39.5696, lng: 2.6502, stato: "SPAGNA", continente: "Europa" },
+  "PALMA DE MAIORCA": { lat: 39.5696, lng: 2.6502, stato: "SPAGNA", continente: "Europa" },
+  "PALMA DE MALLORCA": { lat: 39.5696, lng: 2.6502, stato: "SPAGNA", continente: "Europa" },
   "IBIZA": { lat: 38.9067, lng: 1.4206, stato: "SPAGNA", continente: "Europa" },
   "TENERIFE": { lat: 28.2916, lng: -16.6291, stato: "SPAGNA", continente: "Europa" },
   "GRAN CANARIA": { lat: 27.9202, lng: -15.5474, stato: "SPAGNA", continente: "Europa" },
@@ -299,6 +301,9 @@ const CITIES_DB = {
   "BANGKOK": { lat: 13.7563, lng: 100.5018, stato: "THAILANDIA", continente: "Asia" },
   "PHUKET": { lat: 7.8804, lng: 98.3923, stato: "THAILANDIA", continente: "Asia" },
   "SINGAPORE": { lat: 1.3521, lng: 103.8198, stato: "SINGAPORE", continente: "Asia" },
+  "SEOUL": { lat: 37.5665, lng: 126.9780, stato: "COREA DEL SUD", continente: "Asia" },
+  "SEUL": { lat: 37.5665, lng: 126.9780, stato: "COREA DEL SUD", continente: "Asia" },
+  "ENOSHIMA": { lat: 35.2994, lng: 139.4806, stato: "GIAPPONE", continente: "Asia" },
   "BALI": { lat: -8.4095, lng: 115.1889, stato: "INDONESIA", continente: "Asia" },
   "SYDNEY": { lat: -33.8688, lng: 151.2093, stato: "AUSTRALIA", continente: "Oceania" },
   "MELBOURNE": { lat: -37.8136, lng: 144.9631, stato: "AUSTRALIA", continente: "Oceania" },
@@ -756,6 +761,154 @@ const GeoUtils = {
     return clean;
   },
 
+  // Nome canonico di uno Stato (maiuscolo, italiano, alias e nomi inglesi unificati).
+  // Usato ovunque si contano i Paesi, così "Italia", "ITALIA" e "Italy" valgono uno.
+  canonicalCountry(name) {
+    if (!name || !String(name).trim()) return "";
+    return this.resolveStateName(name);
+  },
+
+  // Nome canonico del continente ("EUROPA", "europa" -> "Europa")
+  normalizeContinent(name) {
+    const clean = this.normalizeName(name);
+    if (!clean) return "";
+    const map = {
+      "EUROPA": "Europa", "EUROPE": "Europa",
+      "ASIA": "Asia",
+      "AFRICA": "Africa",
+      "OCEANIA": "Oceania", "AUSTRALIA": "Oceania",
+      "AMERICA DEL NORD": "America del Nord", "NORD AMERICA": "America del Nord", "NORTH AMERICA": "America del Nord",
+      "AMERICA CENTRALE": "America del Nord", "CENTRO AMERICA": "America del Nord",
+      "AMERICA DEL SUD": "America del Sud", "SUD AMERICA": "America del Sud", "SOUTH AMERICA": "America del Sud",
+      "ANTARTIDE": "Antartide", "ANTARCTICA": "Antartide"
+    };
+    return map[clean] || (clean.charAt(0) + clean.slice(1).toLowerCase());
+  },
+
+  // Nome leggibile di uno Stato canonico ("COREA DEL SUD" -> "Corea del Sud")
+  displayCountryName(canonical) {
+    const small = ["DEL", "DELLA", "DEI", "DEGLI", "DI", "DE", "E", "D"];
+    return String(canonical || "").toLowerCase().split(" ").map((w, i) =>
+      (i > 0 && small.includes(w.toUpperCase())) ? w : w.charAt(0).toUpperCase() + w.slice(1)
+    ).join(" ");
+  },
+
+  // Fonte unica dei Paesi visitati: colonna Stati del Diario + Stati espliciti tra parentesi nelle città.
+  // Restituisce una Map ordinata: nome canonico -> { name, flag, trips: [nomi viaggio], cities: [città] }
+  getVisitedCountries(trips = [], coords = []) {
+    const result = new Map();
+    const ensure = (canon) => {
+      if (!result.has(canon)) {
+        result.set(canon, { name: this.displayCountryName(canon), canonical: canon, flag: this.getFlag(canon), trips: [], cities: [] });
+      }
+      return result.get(canon);
+    };
+    (trips || []).forEach(t => {
+      const tripName = String(t.Nome_Viaggio || "").trim();
+      const states = String(t.Stati || "").split("\n").map(s => this.canonicalCountry(s)).filter(Boolean);
+      const cityLines = String(t.Citta || "").split("\n").map(c => c.trim()).filter(Boolean);
+      cityLines.forEach(line => {
+        const p = this.parseCityAndState(line, []);
+        if (p.explicit && p.state && !states.includes(p.state)) states.push(p.state);
+      });
+      new Set(states).forEach(canon => {
+        const entry = ensure(canon);
+        if (tripName && !entry.trips.includes(tripName)) entry.trips.push(tripName);
+      });
+    });
+    (coords || []).forEach(c => {
+      const canon = this.canonicalCountry(c.Stato);
+      if (!canon || !result.has(canon)) return;
+      const city = this.displayCountryName(this.parseCityAndState(c.Citta, []).city || c.Citta);
+      const entry = result.get(canon);
+      if (city && !entry.cities.includes(city)) entry.cities.push(city);
+    });
+    return new Map([...result.entries()].sort((a, b) => a[1].name.localeCompare(b[1].name, "it")));
+  },
+
+  // True se le coordinate coincidono con il centro dello Stato (città non trovata davvero)
+  // (il "centro" di COUNTRIES_DB è la capitale: se la città È la capitale o è nel DB città, la posizione è vera)
+  isCountryCenterFallback(lat, lng, stateName, cityName = "") {
+    const info = COUNTRIES_DB[this.canonicalCountry(stateName)];
+    if (!info || info.lat === undefined) return false;
+    const city = this.normalizeName(this.parseCityAndState(cityName, []).city || cityName);
+    if (city) {
+      if (CITIES_DB[city] && !CITIES_DB[city].isCountryCenter) return false;
+      const capital = this.normalizeName(info.capital || "");
+      if (capital && (city === capital || city === this.canonicalCountry(stateName))) return false;
+    }
+    return Math.abs(Number(lat) - info.lat) < 0.05 && Math.abs(Number(lng) - info.lng) < 0.05;
+  },
+
+  // Città non presente nel DB in un viaggio con più Stati: cerca online e sceglie
+  // il risultato che cade in uno degli Stati del viaggio. Restituisce { state, geo } o null.
+  async resolveCityAmongStates(cityName, tripStates = []) {
+    const canonStates = tripStates.map(s => this.canonicalCountry(s)).filter(Boolean);
+    if (!cityName || canonStates.length === 0) return null;
+    try {
+      const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityName)}&count=10&language=it&format=json`;
+      const res = await ((typeof AbortSignal !== 'undefined' && AbortSignal.timeout)
+        ? fetch(url, { signal: AbortSignal.timeout(3000) }) : fetch(url));
+      if (!res.ok) return null;
+      const data = await res.json();
+      const results = (data && Array.isArray(data.results)) ? data.results : [];
+      for (const r of results) {
+        const byName = this.canonicalCountry(r.country || "");
+        const byCode = this.canonicalCountry(r.country_code || "");
+        const st = canonStates.find(s => s === byName || s === byCode);
+        if (st) {
+          const geo = {
+            lat: Number(r.latitude), lng: Number(r.longitude), stato: st,
+            continente: this.getContinent(st), emisfero: this.getEmisfero(r.latitude),
+            regione: r.admin1 || "", isOnlineGeocoded: true
+          };
+          try {
+            const cache = JSON.parse(localStorage.getItem("motto_custom_cities_cache") || "{}");
+            // Stessa chiave letta da parseCityAndState: al prossimo avvio la città non è più ambigua
+            cache[`${String(cityName).trim().toUpperCase()}_${st}`] = geo;
+            localStorage.setItem("motto_custom_cities_cache", JSON.stringify(cache));
+          } catch (e) {}
+          return { state: st, geo };
+        }
+      }
+    } catch (e) {
+      console.warn("resolveCityAmongStates error:", e);
+    }
+    return null;
+  },
+
+  // Regione italiana di una città (Open-Meteo admin1), con cache locale permanente.
+  async getItalianRegion(cityName, lat, lng) {
+    const key = this.normalizeName(cityName);
+    if (!key) return "";
+    let cache = {};
+    try { cache = JSON.parse(localStorage.getItem("motto_italy_regions_cache") || "{}"); } catch (e) {}
+    if (cache[key]) return cache[key];
+    try {
+      const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityName)}&count=10&language=it&format=json&countryCode=IT`;
+      const res = await ((typeof AbortSignal !== 'undefined' && AbortSignal.timeout)
+        ? fetch(url, { signal: AbortSignal.timeout(3000) }) : fetch(url));
+      if (!res.ok) return "";
+      const data = await res.json();
+      const results = (data && Array.isArray(data.results)) ? data.results.filter(r => r.country_code === "IT") : [];
+      if (results.length === 0) return "";
+      // Sceglie il risultato più vicino alle coordinate note
+      let best = results[0];
+      if (!isNaN(Number(lat)) && !isNaN(Number(lng))) {
+        best = results.reduce((a, b) =>
+          (Math.hypot(a.latitude - lat, a.longitude - lng) <= Math.hypot(b.latitude - lat, b.longitude - lng)) ? a : b);
+      }
+      const region = best.admin1 || "";
+      if (region) {
+        cache[key] = region;
+        try { localStorage.setItem("motto_italy_regions_cache", JSON.stringify(cache)); } catch (e) {}
+      }
+      return region;
+    } catch (e) {
+      return "";
+    }
+  },
+
   // Parsing avanzato di città e stato opzionale tra parentesi (es. "Cadice (Spagna)" -> { city: "Cadice", state: "SPAGNA", explicit: true })
   parseCityAndState(rawCityLine, tripStates = []) {
     if (!rawCityLine) return { city: "", state: "ITALIA", explicit: false };
@@ -804,7 +957,8 @@ const GeoUtils = {
           }
         }
       } catch (e) {}
-      return { city: pureCity, state: this.resolveStateName(tripStates[0]), explicit: false };
+      // Stato non determinabile offline: provvisorio, da verificare online (vedi API.reconcileCoordinates)
+      return { city: pureCity, state: this.resolveStateName(tripStates[0]), explicit: false, ambiguous: true };
     }
 
     return { city: pureCity, state: "ITALIA", explicit: false };
@@ -1278,21 +1432,29 @@ const GeoUtils = {
       maxZoom: maxZoom,
       zoomControl: true,
       attributionControl: true,
+      keyboard: false,
       scrollWheelZoom: true,
       touchZoom: true,
       tap: true
     });
 
-    // Basemap Dark Matter di CARTO con supporto CORS
-    const darkTileLayer = L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      subdomains: "abcd",
-      maxZoom: 19,
+    // Basemap scura Esri (gratuita, senza chiave, con CORS per l'esportazione immagine).
+    // CARTO dark_all ora restituisce "API KEY REQUIRED" su ogni tassello.
+    const esriBase = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/";
+    L.tileLayer(esriBase + "World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", {
+      attribution: 'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors',
+      maxZoom: 16,
       crossOrigin: true
-    });
-    darkTileLayer.addTo(map);
+    }).addTo(map);
+    // Etichette (nomi di città e Stati) sopra la base
+    L.tileLayer(esriBase + "World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}", {
+      maxZoom: 16,
+      crossOrigin: true
+    }).addTo(map);
 
     this.activeMaps[id] = map;
+    // La mappa è aria-hidden: niente elementi raggiungibili col Tab o con VoiceOver al suo interno
+    container.querySelectorAll('a, button, [tabindex]').forEach(el => el.setAttribute('tabindex', '-1'));
 
     setTimeout(() => {
       try {
@@ -1420,6 +1582,7 @@ const GeoUtils = {
       if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
         latLngs.push([lat, lng]);
         const marker = L.marker([lat, lng], {
+          keyboard: false,
           icon: this.createCityPinIcon(true)
         }).addTo(map);
         marker.bindTooltip(`📍 ${c.Citta}`, {
@@ -1466,6 +1629,7 @@ const GeoUtils = {
       if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
         latLngs.push([lat, lng]);
         const marker = L.marker([lat, lng], {
+          keyboard: false,
           icon: this.createCityPinIcon(false)
         }).addTo(map);
         marker.bindTooltip(`📍 ${c.Citta}`, {
@@ -1473,7 +1637,8 @@ const GeoUtils = {
           direction: "top",
           offset: [0, -8]
         });
-        marker.bindPopup(`<strong>📍 ${c.Citta}</strong><br><span style="color: var(--pink-light);">${c.Stato || ''} (${continentName})</span>`);
+        const countryLabel = c.StatoNome || this.displayCountryName(c.Stato || '');
+        marker.bindPopup(`<strong>📍 ${c.Citta}</strong><br><span style="color: var(--pink-light);">${countryLabel} (${continentName})</span>${c.Approssimata ? '<br><em>Posizione approssimata</em>' : ''}`);
       }
     });
 
@@ -1925,7 +2090,7 @@ const GeoUtils = {
   },
 
   // 4. MAPPA DINAMICA DI VIAGGIO (CON ROTTE CROCIERA E PIN VERDE MENTA PER AEREO / ALTRO)
-  renderTripRouteMap(containerInput, citiesNames = [], isCruise = false, tripType = '') {
+  renderTripRouteMap(containerInput, citiesNames = [], isCruise = false, tripType = '', tripStates = []) {
     const container = typeof containerInput === "string" ? document.getElementById(containerInput) : containerInput;
     if (!container) return;
 
@@ -1945,8 +2110,20 @@ const GeoUtils = {
     (citiesNames || []).forEach((cityName, idx) => {
       const clean = String(cityName).trim();
       if (!clean) return;
-      const parsed = this.parseCityAndState(clean);
-      const coords = this.getCityCoordinates(parsed.city, parsed.state);
+      const parsed = this.parseCityAndState(clean, tripStates);
+      // 1. Prima le coordinate già riconciliate (stesso Stato dove possibile), poi il DB/fallback
+      let coords = null;
+      try {
+        const known = (typeof API !== "undefined" && API.data && API.data[CONFIG.SHEETS.COORDINATE]) || [];
+        const cityNorm = this.normalizeName(parsed.city);
+        const canonStates = (tripStates || []).map(s => this.canonicalCountry(s));
+        const candidates = known.filter(k => this.normalizeName(this.parseCityAndState(k.Citta, []).city) === cityNorm &&
+          !isNaN(Number(k.Latitudine)) && Number(k.Latitudine) !== 0);
+        const best = candidates.find(k => this.canonicalCountry(k.Stato) === this.canonicalCountry(parsed.state)) ||
+          candidates.find(k => canonStates.includes(this.canonicalCountry(k.Stato))) || candidates[0];
+        if (best) coords = { lat: Number(best.Latitudine), lng: Number(best.Longitudine) };
+      } catch (e) {}
+      if (!coords) coords = this.getCityCoordinates(parsed.city, parsed.state);
       if (coords && coords.lat && coords.lng) {
         points.push({ name: parsed.city, lat: coords.lat, lng: coords.lng, step: idx + 1 });
       }
@@ -1970,6 +2147,7 @@ const GeoUtils = {
     points.forEach(p => {
       latLngs.push([p.lat, p.lng]);
       const marker = L.marker([p.lat, p.lng], {
+        keyboard: false,
         icon: isPureCruise ? this.createStepPinIcon(p.step) : this.createCityPinIcon(false)
       }).addTo(map);
       marker.bindTooltip(`📍 ${p.step}. ${p.name}`, {

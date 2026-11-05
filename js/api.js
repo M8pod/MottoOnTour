@@ -558,7 +558,14 @@ const API = {
           const rawCity = cities[i];
           const parsed = GeoUtils.parseCityAndState(rawCity, states);
           const city = parsed.city || rawCity;
-          const state = parsed.state || states[i] || states[0] || "ITALIA";
+          let state = parsed.state || states[i] || states[0] || "ITALIA";
+          let preResolvedGeo = null;
+          // Viaggio con più Stati e città sconosciuta: verifica online in quale Stato del viaggio si trova
+          if (parsed.ambiguous) {
+            const found = await GeoUtils.resolveCityAmongStates(city, states);
+            if (found) { state = found.state; preResolvedGeo = found.geo; }
+          }
+          state = GeoUtils.canonicalCountry(state) || state;
           const cleanCityName = String(city).trim().toUpperCase();
           const cleanStateName = String(state).trim().toUpperCase();
           const coordId = `${cleanCityName}_${cleanStateName}`;
@@ -570,7 +577,16 @@ const API = {
             let continent = existing && existing.Continente ? existing.Continente : null;
             let emisfero = existing && existing.Emisfero ? existing.Emisfero : null;
 
-            if (lat === null || lng === null || (lat === 0 && lng === 0)) {
+            // Coordinate salvate sul centro dello Stato = città mai trovata davvero: si riprova
+            if (lat !== null && lng !== null && GeoUtils.isCountryCenterFallback(lat, lng, cleanStateName, cleanCityName)) {
+              lat = null; lng = null;
+            }
+            if (preResolvedGeo) {
+              lat = preResolvedGeo.lat;
+              lng = preResolvedGeo.lng;
+              continent = preResolvedGeo.continente;
+              emisfero = preResolvedGeo.emisfero;
+            } else if (lat === null || lng === null || (lat === 0 && lng === 0)) {
               try {
                 const geo = await GeoUtils.fetchCoordinatesOnline(city, state);
                 if (geo) {
@@ -600,7 +616,8 @@ const API = {
               Stato: cleanStateName,
               Latitudine: lat,
               Longitudine: lng,
-              Continente: continent || GeoUtils.getContinent(cleanStateName),
+              Continente: GeoUtils.normalizeContinent(continent || GeoUtils.getContinent(cleanStateName)),
+              Approssimata: GeoUtils.isCountryCenterFallback(lat, lng, cleanStateName, cleanCityName),
               Emisfero: emisfero || GeoUtils.getEmisfero(lat),
               ID_Viaggio_Riferimento: tripId,
               Anni_Visita: year
