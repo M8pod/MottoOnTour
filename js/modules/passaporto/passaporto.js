@@ -109,7 +109,7 @@ const PassaportoModule = {
       tripsByYear[y] = (tripsByYear[y] || 0) + 1;
 
       // States
-      const tripStates = t.Stati ? String(t.Stati).split('\n').map(s => s.trim().toUpperCase()).filter(Boolean) : [];
+      const tripStates = t.Stati ? [...new Set(String(t.Stati).split('\n').map(s => GeoUtils.canonicalCountry(s)).filter(Boolean))] : [];
       tripStates.forEach(st => {
         visitedStatesMap.set(st, (visitedStatesMap.get(st) || 0) + 1);
       });
