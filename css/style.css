@@ -816,3 +816,13 @@ textarea.form-control {
     color: #000 !important;
   }
 }
+
+/* Elenchi testuali sotto le mappe (versione accessibile per VoiceOver) */
+.map-place-list {
+  margin: 8px 0 0 0;
+  padding-left: 1.2rem;
+  line-height: 1.5;
+}
+.map-place-list li {
+  margin-bottom: 6px;
+}
