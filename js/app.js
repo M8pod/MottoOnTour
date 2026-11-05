@@ -15,7 +15,10 @@ const App = {
     const savedToken = localStorage.getItem('motto_session_token');
     const requirePinAlways = localStorage.getItem('motto_require_pin_always') === 'true';
 
-    if (savedToken === 'AUTH_OK' && !requirePinAlways) {
+    // Serve anche il PIN salvato: senza, il foglio Google rifiuterebbe ogni richiesta
+    const hasSavedPin = !!localStorage.getItem('motto_pin');
+
+    if (savedToken === 'AUTH_OK' && hasSavedPin && !requirePinAlways) {
       this.isUnlocked = true;
       this.hidePinScreen();
     } else {
@@ -72,11 +75,28 @@ const App = {
     document.getElementById('app-shell').style.display = 'block';
   },
 
-  handlePinSubmit(e) {
+  async handlePinSubmit(e) {
     e.preventDefault();
-    const pinVal = document.getElementById('input-pin').value.trim();
+    const pinInput = document.getElementById('input-pin');
+    const pinVal = pinInput.value.trim();
+    if (!pinVal || this._checkingPin) return;
 
-    if (pinVal === CONFIG.SECRET_PIN) {
+    // Il PIN non è nell'app: lo verifica il foglio Google. Senza connessione vale solo
+    // il PIN già usato con successo su questo dispositivo.
+    this._checkingPin = true;
+    this.notify("Verifica del PIN in corso...");
+    let ok = await API.verifyPin(pinVal);
+    this._checkingPin = false;
+    if (ok === null) {
+      ok = pinVal === localStorage.getItem('motto_pin');
+      if (!ok) {
+        this.notify("Nessuna connessione: per il primo accesso su questo dispositivo serve internet.");
+        pinInput.focus();
+        return;
+      }
+    }
+
+    if (ok) {
       this.isUnlocked = true;
       localStorage.setItem('motto_session_token', 'AUTH_OK');
       localStorage.setItem('motto_pin', pinVal);

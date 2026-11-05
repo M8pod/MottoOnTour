@@ -280,7 +280,7 @@ const API = {
   },
 
   async request(action, payload = {}, isGet = false) {
-    const pin = localStorage.getItem('motto_pin') || CONFIG.SECRET_PIN;
+    const pin = localStorage.getItem('motto_pin') || '';
     
     if (isGet) {
       const url = new URL(CONFIG.API_URL);
@@ -314,6 +314,21 @@ const API = {
         body: bodyData
       });
       return await res.json();
+    }
+  },
+
+  // Verifica un PIN chiedendolo al foglio Google: è lo script del foglio a sapere qual è quello giusto.
+  // Restituisce true (giusto), false (sbagliato) oppure null (nessuna connessione, impossibile verificare).
+  async verifyPin(pin) {
+    try {
+      const url = new URL(CONFIG.API_URL);
+      url.searchParams.append('action', 'getAllData');
+      url.searchParams.append('pin', pin);
+      const res = await fetch(url.toString(), { method: 'GET', mode: 'cors', redirect: 'follow' });
+      const json = await res.json();
+      return !!(json && json.status === 'success');
+    } catch (e) {
+      return null;
     }
   },
 
