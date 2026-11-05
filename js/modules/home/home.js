@@ -9,12 +9,8 @@ const HomeModule = {
     const coords = API.data[CONFIG.SHEETS.COORDINATE] || [];
 
     // 1. Geographic Stats Calculation
-    const visitedStatesSet = new Set();
-    diarioTrips.forEach(t => {
-      if (t.Stati) {
-        String(t.Stati).split('\n').map(s => s.trim().toUpperCase()).filter(Boolean).forEach(s => visitedStatesSet.add(s));
-      }
-    });
+    // Fonte unica condivisa con Mappe e Passaporto (nomi Stato unificati)
+    const visitedStatesSet = new Set(GeoUtils.getVisitedCountries(diarioTrips, coords).keys());
     const visitedCount = visitedStatesSet.size;
     const worldPercentage = ((visitedCount / CONFIG.TOTAL_WORLD_COUNTRIES) * 100).toFixed(1).replace('.', ',');
 
